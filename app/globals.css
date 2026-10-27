@@ -244,6 +244,8 @@ time.meta { display: block; }
 .chips a:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
 .footer__links li { margin-bottom: 8px; }
 .footer__links a:hover { color: #fff; text-decoration: underline; }
+.footer__links .footer__admin { display: inline-block; margin-top: 6px; padding: 5px 16px; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 999px; font-size: 0.9rem; }
+.footer__links .footer__admin:hover { background: rgba(255, 255, 255, 0.12); text-decoration: none; }
 .footer__legal { padding: 18px 0 28px; border-top: 1px solid rgba(255, 255, 255, 0.15); font-size: 0.85rem; opacity: 0.7; }
 
 /* ---------- responsive ---------- */

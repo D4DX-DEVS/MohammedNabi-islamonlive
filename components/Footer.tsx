@@ -27,6 +27,9 @@ export default function Footer({ cats }: { cats: Cat[] }) {
             <li><Link href="/">Home</Link></li>
             <li><Link href="/search">Search</Link></li>
             <li><a href="https://islamonlive.in/">IslamOnlive</a></li>
+            <li>
+              <Link href="/admin" className="footer__admin">Admin</Link>
+            </li>
           </ul>
         </div>
       </div>
