@@ -4,10 +4,12 @@ type Row = Record<string, unknown>
 // through Cloudflare's REST API. D1_API_TOKEN is deliberately not called CLOUDFLARE_API_TOKEN: wrangler would
 // pick that name up and use this database-only token for deploys.
 export async function query<T = Row>(sql: string, params: unknown[] = []): Promise<T[]> {
-  const { CLOUDFLARE_ACCOUNT_ID: account, D1_DATABASE_ID: database } = process.env
+  // D1_ACCOUNT_ID (not CLOUDFLARE_ACCOUNT_ID) because wrangler deploys to that one, and the site may be hosted in another account
+  const account = process.env.D1_ACCOUNT_ID ?? process.env.CLOUDFLARE_ACCOUNT_ID
+  const database = process.env.D1_DATABASE_ID
   const token = process.env.D1_API_TOKEN ?? process.env.CLOUDFLARE_API_TOKEN
   if (!account || !token || !database) {
-    throw new Error('Set CLOUDFLARE_ACCOUNT_ID, D1_API_TOKEN and D1_DATABASE_ID (see .env.example) to build the site')
+    throw new Error('Set D1_ACCOUNT_ID, D1_API_TOKEN and D1_DATABASE_ID (see .env.example) to build the site')
   }
   for (let attempt = 0; ; attempt++) {
     const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/d1/database/${database}/query`, {

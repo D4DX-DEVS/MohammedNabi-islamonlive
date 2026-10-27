@@ -1,12 +1,32 @@
 // Loads db/schema.sql and content/*.json into the D1 database "muhammednabi".
-//   node scripts/d1-seed.mjs --remote   (needs CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID in .env)
+//   node scripts/d1-seed.mjs --remote   (wrangler must be logged in to the account that owns the database)
 //   node scripts/d1-seed.mjs --local    (wrangler's local simulation, used for `npm run preview`)
 // Re-running replaces rows with the same id (INSERT OR REPLACE), it never drops tables.
+// Once the admin page is in use the database is the source of truth, so this refuses to run on a database
+// that already has posts unless you pass --force (it would overwrite edited posts with the original export).
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 
 const DB = 'muhammednabi' // only ever this database; the account has others
 const target = process.argv.includes('--remote') ? '--remote' : '--local'
+
+if (!process.argv.includes('--force')) {
+  let n = 0
+  try {
+    const out = execFileSync(
+      'npx',
+      ['wrangler', 'd1', 'execute', DB, target, ...(target === '--local' ? ['--env', 'local'] : []), '--json', '--command', '"SELECT count(*) AS n FROM posts"'],
+      { encoding: 'utf8', shell: true, stdio: ['ignore', 'pipe', 'ignore'] },
+    )
+    n = Number(/"n":\s*(\d+)/.exec(out)?.[1] ?? 0)
+  } catch {
+    // no posts table yet: a fresh database is fine
+  }
+  if (n > 0) {
+    console.error(`${DB} (${target.slice(2)}) already has ${n} posts. Seeding would overwrite edits made in the admin page.\nRun again with --force only if that is what you want.`)
+    process.exit(1)
+  }
+}
 const posts = JSON.parse(readFileSync('content/posts.json', 'utf8'))
 const cats = JSON.parse(readFileSync('content/categories.json', 'utf8'))
 
@@ -37,6 +57,6 @@ if (batch.length) add(`2-posts-${++n}`, batch)
 
 for (const f of files) {
   console.log('executing', f)
-  execFileSync('npx', ['wrangler', 'd1', 'execute', DB, target, '--file', f], { stdio: 'inherit', shell: true })
+  execFileSync('npx', ['wrangler', 'd1', 'execute', DB, target, ...(target === '--local' ? ['--env', 'local'] : []), '--file', f], { stdio: 'inherit', shell: true })
 }
 console.log(`done: ${cats.length} categories, ${posts.length} posts -> ${DB} (${target.slice(2)})`)

@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "preview": "npm run build && wrangler dev",
+    "preview": "npm run build && wrangler dev --env local",
     "deploy": "npm run build && wrangler deploy",
     "db:seed": "node --env-file=.env scripts/d1-seed.mjs --remote",
     "db:seed:local": "node scripts/d1-seed.mjs --local"
