@@ -78,6 +78,8 @@ export const cleanContent = (html: string) =>
     // internal links lose the WordPress trailing slash (Next would 308 them); dead localhost links become plain text
     .replace(/href="(\/[^"?#]*?)\/"/g, 'href="$1"')
     .replace(/<a [^>]*href="http:\/\/localhost[^"]*"[^>]*>([\s\S]*?)<\/a>/g, '$1')
+    // old posts embed audio over http://, which browsers block on https pages
+    .replace(/(src|href)="http:\/\/(?:www\.)?thafheem\.net/g, '$1="https://thafheem.net')
     .replace(/<font [^>]*>/g, '<span>')
     .replace(/<\/font>/g, '</span>')
 export const readingMinutes = (p: Post) => Math.max(1, Math.round(text(p.content).split(/\s+/).length / 150))
