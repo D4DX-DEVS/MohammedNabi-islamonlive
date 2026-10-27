@@ -1,9 +1,9 @@
 import Link from 'next/link'
 
-// base may already carry a query string (e.g. /search?q=x)
+// base with a query string (search) pages as ?page=N; a plain path pages as /page/N, the original WordPress style
 export default function Pagination({ page, pages, base }: { page: number; pages: number; base: string }) {
   if (pages <= 1) return null
-  const to = (n: number) => `${base}${base.includes('?') ? '&' : '?'}page=${n}`
+  const to = (n: number) => (base.includes('?') ? `${base}&page=${n}` : n === 1 ? base : `${base}/page/${n}`)
   const nums = Array.from({ length: pages }, (_, i) => i + 1).filter(
     (n) => n === 1 || n === pages || Math.abs(n - page) <= 2,
   )

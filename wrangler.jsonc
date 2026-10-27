@@ -1,19 +1,10 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "main": "worker.ts",
   "name": "muhammad-nabi",
   "compatibility_date": "2026-10-01",
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // Static files only: no Worker script, so no CPU limit applies and requests are not billed per invocation.
   "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
-  },
-  // posts and categories
-  "d1_databases": [
-    { "binding": "DB", "database_name": "muhammednabi", "database_id": "41655fd1-4fc7-42f0-b709-9835388c730f" }
-  ],
-  // lets worker.ts key its page cache by deployment
-  "version_metadata": { "binding": "CF_VERSION_METADATA" },
-  // uploaded photos, served through app/uploads/[...path]/route.ts
-  "r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "muhammednabi" }]
+    "directory": "out",
+    "not_found_handling": "404-page"
+  }
 }

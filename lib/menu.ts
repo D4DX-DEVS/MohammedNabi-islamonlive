@@ -1,4 +1,4 @@
-import { type Cat, decode } from './content'
+import { type Cat, decode } from './format'
 
 export type MenuItem = { label: string; href?: string; children?: MenuItem[] }
 

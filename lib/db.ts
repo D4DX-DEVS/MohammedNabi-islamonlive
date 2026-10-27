@@ -1,24 +1,31 @@
-import { getCloudflareContext } from '@opennextjs/cloudflare'
-
 type Row = Record<string, unknown>
 
-// In the Worker the D1 binding is used directly. Under plain `next dev` / `next start` there are no
-// bindings, so the same SQL goes through Cloudflare's REST API with the credentials from .env.
+// The site is built once and served as static files, so D1 is only read at build time (and by `next dev`),
+// through Cloudflare's REST API. D1_API_TOKEN is deliberately not called CLOUDFLARE_API_TOKEN: wrangler would
+// pick that name up and use this database-only token for deploys.
 export async function query<T = Row>(sql: string, params: unknown[] = []): Promise<T[]> {
-  let db: D1Database | undefined
-  try { db = getCloudflareContext().env.DB } catch {}
-  if (db) return (await db.prepare(sql).bind(...params).all<T>()).results
-
-  const { CLOUDFLARE_ACCOUNT_ID: account, CLOUDFLARE_API_TOKEN: token, D1_DATABASE_ID: database } = process.env
+  const { CLOUDFLARE_ACCOUNT_ID: account, D1_DATABASE_ID: database } = process.env
+  const token = process.env.D1_API_TOKEN ?? process.env.CLOUDFLARE_API_TOKEN
   if (!account || !token || !database) {
-    throw new Error('No D1 binding and no CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN / D1_DATABASE_ID in .env')
+    throw new Error('Set CLOUDFLARE_ACCOUNT_ID, D1_API_TOKEN and D1_DATABASE_ID (see .env.example) to build the site')
   }
-  const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/d1/database/${database}/query`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sql, params }),
-  })
-  const json = (await res.json()) as { success: boolean; errors?: { message: string }[]; result?: { results: T[] }[] }
-  if (!json.success || !json.result) throw new Error(`D1 query failed: ${json.errors?.[0]?.message ?? res.status}`)
-  return json.result[0].results
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/d1/database/${database}/query`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sql, params }),
+    })
+    const json = (await res.json().catch(() => null)) as {
+      success: boolean
+      errors?: { message: string }[]
+      result?: { results: T[] }[]
+    } | null
+    if (json?.success && json.result) return json.result[0].results
+    // rate limits and 5xx are worth a retry; anything else (bad token, bad SQL) is not
+    if (attempt < 3 && (res.status === 429 || res.status >= 500)) {
+      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)))
+      continue
+    }
+    throw new Error(`D1 query failed: ${json?.errors?.[0]?.message ?? res.status}`)
+  }
 }

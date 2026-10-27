@@ -6,9 +6,8 @@ import Meta from '@/components/Meta'
 import PostCard from '@/components/PostCard'
 import ReadingSize from '@/components/ReadingSize'
 import ShareButtons from '@/components/ShareButtons'
-import {
-  cat, cleanContent, decode, getAdjacent, getPost, getRelated, href, readingMinutes, text,
-} from '@/lib/content'
+import { getAdjacent, getAllPosts, getPost, getRelated } from '@/lib/content'
+import { cat, cleanContent, decode, href, readingMinutes, text } from '@/lib/format'
 import { SITE_URL } from '@/lib/site'
 import { catColor } from '@/lib/theme'
 
@@ -17,6 +16,13 @@ type Params = Promise<{ category: string; slug: string }>
 const load = async (params: Params) => {
   const { category, slug } = await params
   return getPost(`/${decodeURIComponent(category)}/${decodeURIComponent(slug)}`)
+}
+
+export async function generateStaticParams() {
+  return (await getAllPosts()).map((p) => {
+    const [, category, slug] = p.path.split('/')
+    return { category, slug }
+  })
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {

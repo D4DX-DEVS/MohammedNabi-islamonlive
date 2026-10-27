@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import { type Cat } from '@/lib/content'
+import { media, type Cat } from '@/lib/format'
 import { buildMenu } from '@/lib/menu'
 import MobileNav from './MobileNav'
 import ThemeToggle from './ThemeToggle'
 
-const NABI_LOGO = '/uploads/2018/10/logo-nabi1.png'
-const ISL_LOGO = '/uploads/2018/10/logo-isl.png'
+const NABI_LOGO = media('/uploads/2018/10/logo-nabi1.png')
+const ISL_LOGO = media('/uploads/2018/10/logo-isl.png')
 
 export const SearchIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>

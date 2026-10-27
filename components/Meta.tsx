@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { type Post, date } from '@/lib/content'
+import { type Post, date } from '@/lib/format'
 
 export default function Meta({ p, author = true }: { p: Post; author?: boolean }) {
   return (

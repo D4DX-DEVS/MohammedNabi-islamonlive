@@ -1,4 +1,4 @@
-import type { Cat } from './content'
+import type { Cat } from './format'
 
 const COLORS: Record<string, string> = {
   'nabi-articles': '#8f6e00',

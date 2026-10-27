@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
-import { type Post, cat, date, decode, href, text } from '@/lib/content'
+import { type Post, cat, date, decode, href, text } from '@/lib/format'
 import { catColor } from '@/lib/theme'
 import Thumb from './Thumb'
 

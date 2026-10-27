@@ -9,3 +9,4 @@ next-env.d.ts
 *.tsbuildinfo
 # photos live in R2 (npm run r2:upload); a local copy is only for `next dev`
 public/uploads
+out

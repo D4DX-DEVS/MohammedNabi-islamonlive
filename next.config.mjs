@@ -1,13 +1,6 @@
-// the Cloudflare adapter requires a Next config file
-const securityHeaders = [
-  { key: 'X-Content-Type-Options', value: 'nosniff' },
-  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-]
-
+// Fully static site: `next build` writes plain files to ./out, which Cloudflare serves with no Worker running.
 export default {
-  async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }]
-  },
+  output: 'export',
+  // no image optimizer in a static export; photos are served as-is from the media bucket
+  images: { unoptimized: true },
 }
