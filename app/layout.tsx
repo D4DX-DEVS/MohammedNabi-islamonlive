@@ -19,8 +19,11 @@ export const metadata: Metadata = {
 // runs before paint: apply saved (or system) colour scheme and reading size, so nothing flashes
 const init = `try{var d=document.documentElement,t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');d.dataset.theme=t;var r=localStorage.getItem('read');if(r)d.style.setProperty('--read',r+'rem')}catch(e){}`
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const cats = getCategories()
+// every page reads D1 per request (the Worker caches the rendered result), so nothing is prerendered at build time
+export const dynamic = 'force-dynamic'
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const cats = await getCategories()
   return (
     <html lang="ml" className={`${sans.variable} ${serif.variable}`} suppressHydrationWarning>
       <head>

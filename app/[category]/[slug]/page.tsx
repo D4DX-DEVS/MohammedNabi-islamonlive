@@ -7,7 +7,7 @@ import PostCard from '@/components/PostCard'
 import ReadingSize from '@/components/ReadingSize'
 import ShareButtons from '@/components/ShareButtons'
 import {
-  cat, cleanContent, decode, getAdjacent, getAllPosts, getPost, getRelated, href, readingMinutes, text,
+  cat, cleanContent, decode, getAdjacent, getPost, getRelated, href, readingMinutes, text,
 } from '@/lib/content'
 import { SITE_URL } from '@/lib/site'
 import { catColor } from '@/lib/theme'
@@ -18,12 +18,6 @@ const load = async (params: Params) => {
   const { category, slug } = await params
   return getPost(`/${decodeURIComponent(category)}/${decodeURIComponent(slug)}`)
 }
-
-export const generateStaticParams = () =>
-  getAllPosts().map((p) => {
-    const [, category, slug] = p.path.split('/')
-    return { category, slug }
-  })
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const p = await load(params)
@@ -50,8 +44,7 @@ export default async function PostPage({ params }: { params: Params }) {
   const p = await load(params)
   if (!p) notFound()
   const c = cat(p)
-  const { newer, older } = getAdjacent(p)
-  const related = getRelated(p)
+  const [{ newer, older }, related] = await Promise.all([getAdjacent(p), getRelated(p)])
   const title = text(p.title)
   return (
     <div className="wrap">

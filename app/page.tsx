@@ -3,7 +3,7 @@ import OverlayCard from '@/components/OverlayCard'
 import PostCard from '@/components/PostCard'
 import PostRow from '@/components/PostRow'
 import Section from '@/components/Section'
-import { decode, getCategories, getCategoryPosts, getPosts, type Post } from '@/lib/content'
+import { decode, getCategories, getPosts, type Post } from '@/lib/content'
 import { catColor } from '@/lib/theme'
 
 type Layout = 'cards' | 'overlay' | 'rows'
@@ -17,14 +17,19 @@ const sections: [slug: string, layout: Layout][] = [
   ['stories-poems', 'rows'],
 ]
 
-export default function Home() {
-  const cats = getCategories()
-  const latest = getPosts(undefined, 5)
+export default async function Home() {
+  const cats = await getCategories()
+  const catOf = (slug: string) => cats.find((x) => x.slug === slug)
+  // newest 40 per section is plenty to find 4 posts with photos
+  const [latest, ...lists] = await Promise.all([
+    getPosts(undefined, 5),
+    ...sections.map(([slug]) => (catOf(slug) ? getPosts(catOf(slug)!.id, 40) : Promise.resolve([] as Post[]))),
+  ])
   // a post may sit in several categories; show it once on this page
   const used = new Set(latest.map((p) => p.id))
 
-  const pick = (catId: number, n: number, photosFirst: boolean) => {
-    let list = getCategoryPosts(catId).filter((p) => !used.has(p.id))
+  const pick = (all: Post[], n: number, photosFirst: boolean) => {
+    let list = all.filter((p) => !used.has(p.id))
     if (photosFirst) list = [...list.filter((p) => p.image), ...list.filter((p) => !p.image)]
     const out = list.slice(0, n)
     out.forEach((p) => used.add(p.id))
@@ -49,10 +54,10 @@ export default function Home() {
           ))}
         </nav>
 
-        {sections.map(([slug, layout]) => {
-          const c = cats.find((x) => x.slug === slug)
+        {sections.map(([slug, layout], i) => {
+          const c = catOf(slug)
           if (!c) return null
-          const posts: Post[] = pick(c.id, layout === 'rows' ? 9 : 4, layout !== 'rows')
+          const posts = pick(lists[i], layout === 'rows' ? 9 : 4, layout !== 'rows')
           if (!posts.length) return null
           return (
             <Section key={slug} title={decode(c.name)} href={`/category/${slug}`} color={catColor(c)}>

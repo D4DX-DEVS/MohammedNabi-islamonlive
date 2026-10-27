@@ -1,8 +1,6 @@
-# Cloudflare serves /public files straight from static assets, bypassing next.config headers
+# Cloudflare serves files in /public straight from static assets, bypassing next.config headers
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: SAMEORIGIN
   Permissions-Policy: camera=(), microphone=(), geolocation=()
-/uploads/*
-  Cache-Control: public, max-age=604800

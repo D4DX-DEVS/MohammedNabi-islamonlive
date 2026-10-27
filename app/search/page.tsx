@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import PostCard from '@/components/PostCard'
 import Pagination from '@/components/Pagination'
-import { paginate, search } from '@/lib/content'
+import { searchPage } from '@/lib/content'
 
 type Props = { searchParams: Promise<{ q?: string; page?: string }> }
 
@@ -11,8 +11,7 @@ export default async function Search({ searchParams }: Props) {
   const sp = await searchParams
   const q = (sp.q ?? '').trim()
   const page = Math.max(1, Number(sp.page) || 1)
-  const results = search(q)
-  const { data, pages } = paginate(results, page)
+  const { data, total, pages } = await searchPage(q, page)
   return (
     <div className="wrap">
       <header className="page-head">
@@ -21,7 +20,7 @@ export default async function Search({ searchParams }: Props) {
           <input type="search" name="q" defaultValue={q} placeholder="Search articles…" aria-label="Search" autoFocus />
           <button type="submit">Search</button>
         </form>
-        {q && <p>{results.length} result{results.length === 1 ? '' : 's'}</p>}
+        {q && <p>{total} result{total === 1 ? '' : 's'}</p>}
       </header>
       <div className="grid grid--3">
         {data.map((p) => (

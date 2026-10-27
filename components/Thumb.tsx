@@ -13,7 +13,8 @@ export default function Thumb({ src, alt, sizes, priority }: Props) {
   }
   return (
     <div className="thumb">
-      <Image src={src} alt={alt} fill sizes={sizes} priority={priority} />
+      {/* unoptimized: photos live in R2 behind /uploads, which Cloudflare's image resizer can't read */}
+      <Image src={src} alt={alt} fill sizes={sizes} priority={priority} unoptimized />
     </div>
   )
 }

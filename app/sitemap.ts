@@ -1,13 +1,17 @@
 import type { MetadataRoute } from 'next'
-import index from '@/content/sitemap-index.json'
+import { getCategories, getSitemapEntries } from '@/lib/content'
 import { SITE_URL } from '@/lib/site'
 
-export default function sitemap(): MetadataRoute.Sitemap {
+// reads D1, which the build machine has no access to
+export const dynamic = 'force-dynamic'
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const abs = (p: string) => `${SITE_URL}${p}`
+  const [cats, { posts, authors }] = await Promise.all([getCategories(), getSitemapEntries()])
   return [
     { url: abs('/') },
-    ...index.categories.map((slug) => ({ url: abs(`/category/${slug}`) })),
-    ...index.authors.map((slug) => ({ url: abs(`/author/${slug}`) })),
-    ...index.posts.map((p) => ({ url: abs(encodeURI(p.path)), lastModified: p.date })),
+    ...cats.map((c) => ({ url: abs(`/category/${c.slug}`) })),
+    ...authors.map((slug) => ({ url: abs(`/author/${slug}`) })),
+    ...posts.map((p) => ({ url: abs(encodeURI(p.path)), lastModified: p.date })),
   ]
 }
