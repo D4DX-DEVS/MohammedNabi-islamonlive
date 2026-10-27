@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS posts (
   title TEXT NOT NULL,                -- HTML-entity encoded, as exported
   excerpt TEXT NOT NULL,
   content TEXT NOT NULL,              -- HTML
-  image TEXT,                         -- /uploads/... (served from R2), NULL when the post has no photo
+  image TEXT,                         -- /uploads/..., a file in public/uploads; NULL when the post has no photo
   categories TEXT NOT NULL,           -- JSON array of category ids, first one is the primary
   author TEXT NOT NULL DEFAULT '',
   author_slug TEXT NOT NULL DEFAULT ''

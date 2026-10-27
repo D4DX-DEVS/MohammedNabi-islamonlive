@@ -1,12 +1,12 @@
 import Link from 'next/link'
-import { media, type Cat, decode } from '@/lib/format'
+import { type Cat, decode } from '@/lib/format'
 
 export default function Footer({ cats }: { cats: Cat[] }) {
   return (
     <footer className="site-footer">
       <div className="wrap footer__grid">
         <div>
-          <img className="footer__logo" src={media('/uploads/2018/10/logo-nabi1.png')} alt="Mohammed Nabi" />
+          <img className="footer__logo" src="/uploads/2018/10/logo-nabi1.png" alt="Mohammed Nabi" />
           <p className="footer__about">
             പ്രവാചകൻ മുഹമ്മദ് നബി (സ)യുടെ ജീവിതം, സന്ദേശം, ലേഖനങ്ങൾ, ഹദീസുകൾ.
           </p>

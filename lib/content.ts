@@ -1,5 +1,5 @@
 import { query } from './db'
-import { media, text, type Cat, type Post } from './format'
+import { text, type Cat, type Post } from './format'
 
 export const PER_PAGE = 12
 
@@ -30,7 +30,7 @@ async function fetchAll(): Promise<Snapshot> {
         title: r.title as string,
         excerpt: r.excerpt as string,
         content: r.content as string,
-        image: r.image ? media(r.image as string) : null,
+        image: (r.image as string | null) ?? null,
         categories,
         category: cats.find((c) => c.id === categories[0]),
         author: r.author as string,

@@ -8,3 +8,7 @@
 # hashed build files never change
 /_next/static/*
   Cache-Control: public, max-age=31536000, immutable
+
+# photo file names are not hashed, so keep this short enough that a replaced photo shows up within a week
+/uploads/*
+  Cache-Control: public, max-age=604800

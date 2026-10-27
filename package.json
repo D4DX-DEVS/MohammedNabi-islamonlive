@@ -4,12 +4,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postbuild": "node -e \"require('fs').rmSync('out/uploads',{recursive:true,force:true})\"",
     "preview": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy",
     "db:seed": "node --env-file=.env scripts/d1-seed.mjs --remote",
-    "db:seed:local": "node scripts/d1-seed.mjs --local",
-    "r2:upload": "node --env-file=.env scripts/r2-upload.mjs"
+    "db:seed:local": "node scripts/d1-seed.mjs --local"
   },
   "dependencies": {
     "@types/node": "^26.6.5",
