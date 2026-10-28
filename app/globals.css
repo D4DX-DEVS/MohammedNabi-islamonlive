@@ -49,8 +49,8 @@ ul { list-style: none; margin: 0; padding: 0; }
 .skip-link:focus { left: 8px; }
 
 /* ---------- header ---------- */
-.brandbar { background: var(--bg); border-bottom: 1px solid var(--border); }
-.brandbar__inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; }
+.brandbar { background: var(--bg) url('/uploads/2018/10/rmd-bg0.png'); border-top: 3px solid #222; border-bottom: 1px solid var(--border); }
+.brandbar__inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 0; }
 .brandbar__logo img { height: 64px; width: auto; display: block; }
 .brandbar__partner img { height: 48px; width: auto; display: block; }
 :root[data-theme='dark'] .brandbar img { background: #f4f3ee; border-radius: 8px; padding: 4px 8px; }

@@ -17,8 +17,8 @@ export const metadata: Metadata = {
   openGraph: { siteName: 'Mohammed Nabi', locale: 'ml_IN', type: 'website' },
 }
 
-// runs before paint: apply saved (or system) colour scheme and reading size, so nothing flashes
-const init = `try{var d=document.documentElement,t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');d.dataset.theme=t;var r=localStorage.getItem('read');if(r)d.style.setProperty('--read',r+'rem')}catch(e){}`
+// runs before paint: always light theme; apply saved reading size, so nothing flashes
+const init = `try{var d=document.documentElement;d.dataset.theme='light';var r=localStorage.getItem('read');if(r)d.style.setProperty('--read',r+'rem')}catch(e){}`
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const cats = await getCategories()

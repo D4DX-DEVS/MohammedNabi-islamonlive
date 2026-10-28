@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import ThemeToggle from '@/components/ThemeToggle'
 import { api, ApiError, type Meta, type Row } from './api'
 import Login from './Login'
 import PostEditor from './PostEditor'
@@ -81,7 +80,6 @@ function Shell() {
           <a className="adm-btn adm-btn--ghost adm-btn--small" href="/" target="_blank" rel="noopener noreferrer">
             View site <Icon name="external" size={14} />
           </a>
-          <ThemeToggle />
           <button className="adm-icon" title="Log out" aria-label="Log out" onClick={() => api('logout', 'POST').finally(() => setAuthed(false))}>
             <Icon name="logout" />
           </button>

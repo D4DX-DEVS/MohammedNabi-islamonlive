@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { type Cat } from '@/lib/format'
 import { buildMenu } from '@/lib/menu'
 import MobileNav from './MobileNav'
-import ThemeToggle from './ThemeToggle'
 
 const NABI_LOGO = '/uploads/2018/10/logo-nabi1.png'
 const ISL_LOGO = '/uploads/2018/10/logo-islamonlive.png'
@@ -30,7 +29,6 @@ export default function Header({ cats }: { cats: Cat[] }) {
             <Link href="/search" className="icon-btn" aria-label="Search">
               <SearchIcon />
             </Link>
-            <ThemeToggle />
             <MobileNav menu={menu} />
           </div>
         </div>
@@ -58,7 +56,6 @@ export default function Header({ cats }: { cats: Cat[] }) {
             <Link href="/search" className="icon-btn" aria-label="Search">
               <SearchIcon />
             </Link>
-            <ThemeToggle />
           </div>
         </div>
       </nav>
