@@ -1,6 +1,5 @@
 // Loads db/schema.sql and content/*.json into the D1 database "muhammednabi".
-//   node scripts/d1-seed.mjs --remote   (wrangler must be logged in to the account that owns the database)
-//   node scripts/d1-seed.mjs --local    (wrangler's local simulation, used for `npm run preview`)
+//   npm run db:seed   (wrangler must be logged in to the account that owns the database)
 // Re-running replaces rows with the same id (INSERT OR REPLACE), it never drops tables.
 // Once the admin page is in use the database is the source of truth, so this refuses to run on a database
 // that already has posts unless you pass --force (it would overwrite edited posts with the original export).
@@ -8,14 +7,14 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 
 const DB = 'muhammednabi' // only ever this database; the account has others
-const target = process.argv.includes('--remote') ? '--remote' : '--local'
+const target = '--remote'
 
 if (!process.argv.includes('--force')) {
   let n = 0
   try {
     const out = execFileSync(
       'npx',
-      ['wrangler', 'd1', 'execute', DB, target, ...(target === '--local' ? ['--env', 'local'] : []), '--json', '--command', '"SELECT count(*) AS n FROM posts"'],
+      ['wrangler', 'd1', 'execute', DB, target, '--json', '--command', '"SELECT count(*) AS n FROM posts"'],
       { encoding: 'utf8', shell: true, stdio: ['ignore', 'pipe', 'ignore'] },
     )
     n = Number(/"n":\s*(\d+)/.exec(out)?.[1] ?? 0)
@@ -57,6 +56,6 @@ if (batch.length) add(`2-posts-${++n}`, batch)
 
 for (const f of files) {
   console.log('executing', f)
-  execFileSync('npx', ['wrangler', 'd1', 'execute', DB, target, ...(target === '--local' ? ['--env', 'local'] : []), '--file', f], { stdio: 'inherit', shell: true })
+  execFileSync('npx', ['wrangler', 'd1', 'execute', DB, target, '--file', f], { stdio: 'inherit', shell: true })
 }
 console.log(`done: ${cats.length} categories, ${posts.length} posts -> ${DB} (${target.slice(2)})`)

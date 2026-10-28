@@ -4,10 +4,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "preview": "npm run build && wrangler dev --env local",
-    "deploy": "npm run build && wrangler deploy",
-    "db:seed": "node --env-file=.env scripts/d1-seed.mjs --remote",
-    "db:seed:local": "node scripts/d1-seed.mjs --local"
+    "start": "next start",
+    "db:seed": "node --env-file=.env scripts/d1-seed.mjs"
   },
   "dependencies": {
     "@types/node": "^26.6.5",

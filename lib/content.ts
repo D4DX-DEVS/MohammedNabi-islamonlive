@@ -1,100 +1,106 @@
+import { unstable_cache } from 'next/cache'
 import { query } from './db'
-import { text, type Cat, type Post } from './format'
+import type { Cat, Post } from './format'
 
 export const PER_PAGE = 12
+export const CONTENT_TAG = 'content' // expired by the admin API after every edit, so changes show up straight away
 
-// The whole database (about 5 MB) is read once per build process and everything below works on that snapshot,
-// so building ~430 pages costs a handful of D1 requests instead of thousands.
-type Snapshot = { cats: Cat[]; posts: Post[] } // posts newest first
-let snapshot: Promise<Snapshot> | undefined
-const load = () => (snapshot ??= fetchAll())
+// Every read goes to D1 once, then is served from Next's cache. The hour is only a safety net:
+// editing in the admin expires the tag immediately.
+const cached = <A extends unknown[], R>(key: string, fn: (...args: A) => Promise<R>) =>
+  unstable_cache(fn, [key], { revalidate: 3600, tags: [CONTENT_TAG] })
+
+// list queries leave out the post body; the primary category is joined in so cards need no second lookup
+const COLS = `p.id, p.slug, p.path, p.date, p.title, p.excerpt, p.image, p.categories, p.author, p.author_slug,
+  c.id AS cat_id, c.slug AS cat_slug, c.name AS cat_name`
+const FROM = `FROM posts p LEFT JOIN categories c ON c.id = json_extract(p.categories, '$[0]')`
+const inCat = (n: number) => `EXISTS (SELECT 1 FROM json_each(p.categories) WHERE value = ?${n})`
 
 type Row = Record<string, unknown>
-async function fetchAll(): Promise<Snapshot> {
-  const cats = await query<Cat>('SELECT id, slug, name FROM categories ORDER BY name')
-  const ids = (await query<{ id: number }>('SELECT id FROM posts')).map((r) => r.id)
-  const rows: Row[] = []
-  // bodies are large, so fetch them in small batches
-  for (let i = 0; i < ids.length; i += 25) {
-    const batch = ids.slice(i, i + 25)
-    rows.push(...(await query(`SELECT * FROM posts WHERE id IN (${batch.map(() => '?').join(',')})`, batch)))
-  }
-  const posts = rows
-    .map((r): Post => {
-      const categories: number[] = JSON.parse(r.categories as string)
-      return {
-        id: r.id as number,
-        slug: r.slug as string,
-        path: r.path as string,
-        date: r.date as string,
-        title: r.title as string,
-        excerpt: r.excerpt as string,
-        content: r.content as string,
-        image: (r.image as string | null) ?? null,
-        categories,
-        category: cats.find((c) => c.id === categories[0]),
-        author: r.author as string,
-        authorSlug: r.author_slug as string,
-      }
-    })
-    .sort((a, b) => b.date.localeCompare(a.date))
-  if (!posts.length) throw new Error('D1 returned no posts; run `npm run db:seed` first')
-  return { cats, posts }
-}
-
-// listings never render a body, so drop it to keep the page data small
-const lite = (p: Post): Post => ({ ...p, content: '' })
-const page = <T>(all: T[], n: number) => ({
-  data: all.slice((n - 1) * PER_PAGE, n * PER_PAGE),
-  total: all.length,
-  pages: Math.max(1, Math.ceil(all.length / PER_PAGE)),
+const toPost = (r: Row): Post => ({
+  id: r.id as number,
+  slug: r.slug as string,
+  path: r.path as string,
+  date: r.date as string,
+  title: r.title as string,
+  excerpt: r.excerpt as string,
+  content: (r.content as string) ?? '',
+  image: (r.image as string | null) ?? null,
+  categories: JSON.parse(r.categories as string),
+  category: r.cat_id == null ? undefined : { id: r.cat_id as number, slug: r.cat_slug as string, name: r.cat_name as string },
+  author: r.author as string,
+  authorSlug: r.author_slug as string,
 })
 
-export const getCategories = async () => (await load()).cats
-export const getAllPosts = async () => (await load()).posts
+export const getCategories = cached('categories', () => query<Cat>('SELECT id, slug, name FROM categories ORDER BY name'))
 
-export async function getPosts(catId?: number, limit = 5) {
-  const { posts } = await load()
-  return (catId ? posts.filter((p) => p.categories.includes(catId)) : posts).slice(0, limit).map(lite)
+export const getPosts = cached('posts', async (catId: number | null, limit: number) => {
+  const rows = catId
+    ? await query(`SELECT ${COLS} ${FROM} WHERE ${inCat(1)} ORDER BY p.date DESC LIMIT ?2`, [catId, limit])
+    : await query(`SELECT ${COLS} ${FROM} ORDER BY p.date DESC LIMIT ?1`, [limit])
+  return rows.map(toPost)
+})
+
+// `where` uses ?1..?n for its own params; limit and offset take the next two numbers
+async function pagePosts(where: string, params: unknown[], page: number) {
+  const n = params.length
+  const [rows, count] = await Promise.all([
+    query(`SELECT ${COLS} ${FROM} ${where} ORDER BY p.date DESC LIMIT ?${n + 1} OFFSET ?${n + 2}`, [
+      ...params,
+      PER_PAGE,
+      (page - 1) * PER_PAGE,
+    ]),
+    query<{ n: number }>(`SELECT count(*) AS n FROM posts p ${where}`, params),
+  ])
+  const total = count[0]?.n ?? 0
+  return { data: rows.map(toPost), total, pages: Math.max(1, Math.ceil(total / PER_PAGE)) }
 }
+export const getCategoryPage = cached('category-page', (catId: number, page: number) => pagePosts(`WHERE ${inCat(1)}`, [catId], page))
+export const getAuthorPage = cached('author-page', (slug: string, page: number) => pagePosts('WHERE p.author_slug = ?1', [slug], page))
 
-export async function getCategoryPage(catId: number, n: number) {
-  const r = page((await load()).posts.filter((p) => p.categories.includes(catId)), n)
-  return { ...r, data: r.data.map(lite) }
-}
+export const getAuthor = cached('author', async (slug: string) => {
+  const rows = await query<{ slug: string; name: string }>(
+    'SELECT author_slug AS slug, author AS name FROM posts WHERE author_slug = ?1 LIMIT 1',
+    [slug],
+  )
+  return rows[0] ?? null
+})
 
-export async function getAuthors() {
-  const names = new Map<string, string>()
-  for (const p of (await load()).posts) if (p.authorSlug) names.set(p.authorSlug, p.author)
-  return [...names].map(([slug, name]) => ({ slug, name }))
-}
-export const getAuthor = async (slug: string) => (await getAuthors()).find((a) => a.slug === slug)
+export const getPost = cached('post', async (path: string) => {
+  const rows = await query(`SELECT ${COLS}, p.content ${FROM} WHERE p.path = ?1`, [path])
+  return rows[0] ? toPost(rows[0]) : null
+})
 
-export async function getAuthorPage(slug: string, n: number) {
-  const r = page((await load()).posts.filter((p) => p.authorSlug === slug), n)
-  return { ...r, data: r.data.map(lite) }
-}
+export const getRelated = cached('related', async (id: number, categories: number[], n: number) => {
+  const rows = await query(
+    `SELECT ${COLS} ${FROM} WHERE p.id != ?1 AND EXISTS (SELECT 1 FROM json_each(p.categories) a, json_each(?2) b WHERE a.value = b.value)
+     ORDER BY p.date DESC LIMIT ?3`,
+    [id, JSON.stringify(categories), n],
+  )
+  return rows.map(toPost)
+})
 
-export const getPost = async (path: string) => (await load()).posts.find((p) => p.path === path)
+export const getAdjacent = cached('adjacent', async (date: string) => {
+  const [newer, older] = await Promise.all([
+    query(`SELECT ${COLS} ${FROM} WHERE p.date > ?1 ORDER BY p.date ASC LIMIT 1`, [date]),
+    query(`SELECT ${COLS} ${FROM} WHERE p.date < ?1 ORDER BY p.date DESC LIMIT 1`, [date]),
+  ])
+  return { newer: newer[0] ? toPost(newer[0]) : null, older: older[0] ? toPost(older[0]) : null }
+})
 
-export async function getRelated(p: Post, n = 3) {
-  return (await load()).posts
-    .filter((x) => x.id !== p.id && x.categories.some((c) => p.categories.includes(c)))
-    .slice(0, n)
-    .map(lite)
-}
+export const getSitemapEntries = cached('sitemap', async () => {
+  const [posts, authors] = await Promise.all([
+    query<{ path: string; date: string }>('SELECT path, date FROM posts'),
+    query<{ author_slug: string }>("SELECT DISTINCT author_slug FROM posts WHERE author_slug != ''"),
+  ])
+  return { posts, authors: authors.map((a) => a.author_slug) }
+})
 
-// posts are newest first, so "older" is the next one in the list
-export async function getAdjacent(p: Post) {
-  const { posts } = await load()
-  const i = posts.findIndex((x) => x.id === p.id)
-  return { newer: posts[i - 1] && lite(posts[i - 1]), older: posts[i + 1] && lite(posts[i + 1]) }
-}
-
-// what the browser-side search downloads: listing fields plus lowercase plain text of the whole post
-export async function getSearchIndex() {
-  return (await load()).posts.map((p) => ({
-    ...lite(p),
-    s: text(`${p.title} ${p.excerpt} ${p.content}`).toLowerCase(),
-  }))
+// every word must appear in the title, summary or body. Not cached: results depend on whatever was typed.
+export function searchPage(q: string, page: number) {
+  const terms = q.trim().split(/\s+/).filter(Boolean).slice(0, 5)
+  if (!terms.length) return Promise.resolve({ data: [] as Post[], total: 0, pages: 1 })
+  const like = (t: string) => `%${t.slice(0, 60).replace(/[\\%_]/g, '\\$&')}%`
+  const match = (n: number) => `(p.title LIKE ?${n} ESCAPE '\\' OR p.excerpt LIKE ?${n} ESCAPE '\\' OR p.content LIKE ?${n} ESCAPE '\\')`
+  return pagePosts('WHERE ' + terms.map((_, i) => match(i + 1)).join(' AND '), terms.map(like), page)
 }

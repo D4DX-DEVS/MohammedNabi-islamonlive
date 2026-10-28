@@ -5,7 +5,7 @@ import { decode } from '@/lib/format'
 
 type Cat = { id: number; slug: string; name: string }
 type Author = { name: string; slug: string }
-type Meta = { categories: Cat[]; authors: Author[]; publishConfigured: boolean }
+type Meta = { categories: Cat[]; authors: Author[] }
 type Row = { id: number; path: string; date: string; title: string; categories: number[]; author: string }
 type Draft = {
   id?: number
@@ -19,8 +19,6 @@ type Draft = {
   image: string
   date: string // yyyy-mm-ddThh:mm
 }
-type Run = { status: string; conclusion: string | null; url: string } | null
-
 class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message)
@@ -39,6 +37,37 @@ async function api<T = Record<string, unknown>>(path: string, method = 'GET', bo
   return data as T
 }
 
+// Photos are shrunk to WebP (max 1600 px wide) in the browser before upload: smaller files, faster pages.
+// GIFs and anything that does not get smaller are sent as they are.
+async function preparePhoto(file: File): Promise<Blob> {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return file
+  try {
+    const bmp = await createImageBitmap(file)
+    const scale = Math.min(1, 1600 / bmp.width)
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(bmp.width * scale)
+    canvas.height = Math.round(bmp.height * scale)
+    canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height)
+    const webp = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/webp', 0.82))
+    return webp && webp.size < file.size ? webp : file
+  } catch {
+    return file
+  }
+}
+
+async function uploadPhoto(file: File): Promise<string> {
+  const blob = await preparePhoto(file)
+  const res = await fetch('/api/upload', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': blob.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) },
+    body: blob,
+  })
+  const data = (await res.json().catch(() => ({}))) as { path?: string; error?: string }
+  if (!res.ok || !data.path) throw new ApiError(res.status, data.error ?? 'Upload failed')
+  return data.path
+}
+
 const nowLocal = () => new Date().toISOString().slice(0, 16)
 const blank = (): Draft => ({ title: '', slug: '', categories: [], author: '', authorSlug: '', excerpt: '', content: '', image: '', date: nowLocal() })
 // latin titles get a suggested address; Malayalam titles need one typed by hand
@@ -50,7 +79,6 @@ export default function AdminApp() {
   const [posts, setPosts] = useState<Row[]>([])
   const [draft, setDraft] = useState<Draft | null>(null)
   const [notice, setNotice] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
-  const [run, setRun] = useState<Run>(null)
 
   const fail = useCallback((e: unknown) => {
     if (e instanceof ApiError && e.status === 401) setAuthed(false)
@@ -76,26 +104,8 @@ export default function AdminApp() {
     void load()
   }, [load])
 
-  // after Publish, watch the deploy job until it finishes
-  useEffect(() => {
-    if (!run || run.status === 'completed') return
-    const t = setInterval(() => api<{ run: Run }>('publish').then((r) => setRun(r.run), () => {}), 6000)
-    return () => clearInterval(t)
-  }, [run])
-
-  if (authed === null) return <div className="wrap admin"><p>Loading…</p></div>
+  if (authed === null) return <div className="wrap admin"><h1>Admin</h1><p>Loading…</p></div>
   if (!authed) return <Login onDone={load} notice={notice} />
-
-  const publish = async () => {
-    setNotice(null)
-    try {
-      await api('publish', 'POST')
-      setRun({ status: 'queued', conclusion: null, url: '' })
-      setNotice({ kind: 'ok', text: 'Publishing started. The site updates in about two minutes.' })
-    } catch (e) {
-      fail(e)
-    }
-  }
 
   return (
     <div className="wrap admin">
@@ -103,24 +113,10 @@ export default function AdminApp() {
         <h1>Admin</h1>
         <div className="admin__actions">
           {!draft && <button className="btn" onClick={() => { setNotice(null); setDraft(blank()) }}>New post</button>}
-          <button
-            className="btn btn--ghost"
-            onClick={publish}
-            disabled={!meta?.publishConfigured || (run !== null && run.status !== 'completed')}
-            title={meta?.publishConfigured ? 'Rebuild and update the live site' : 'Publishing is not set up yet; run npm run deploy instead'}
-          >
-            Publish
-          </button>
           <button className="btn btn--ghost" onClick={() => api('logout', 'POST').finally(() => setAuthed(false))}>Log out</button>
         </div>
       </header>
 
-      {run && (
-        <p className="admin__note">
-          Publish job: <b>{run.status === 'completed' ? (run.conclusion === 'success' ? 'done, the site is updated' : `finished: ${run.conclusion}`) : run.status}</b>
-          {run.url && <> · <a href={run.url} target="_blank" rel="noopener noreferrer">details</a></>}
-        </p>
-      )}
       {notice && <p className={`admin__note admin__note--${notice.kind}`} role="status">{notice.text}</p>}
 
       {draft && meta ? (
@@ -153,7 +149,7 @@ export default function AdminApp() {
             if (!confirm(`Delete "${decode(row.title)}"? This cannot be undone.`)) return
             try {
               await api(`posts/${row.id}`, 'DELETE')
-              setNotice({ kind: 'ok', text: 'Deleted. It disappears from the site after you publish.' })
+              setNotice({ kind: 'ok', text: 'Deleted. It is gone from the site.' })
               await load()
             } catch (e) {
               fail(e)
@@ -258,6 +254,32 @@ function Editor({ initial, meta, onCancel, onSaved, onError }: {
   const area = useRef<HTMLTextAreaElement>(null)
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }))
 
+  const [uploading, setUploading] = useState(false)
+  // upload a photo; either use it as the post's main photo or put an <img> into the text at the cursor
+  const pick = async (e: React.ChangeEvent<HTMLInputElement>, insert: boolean) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    try {
+      const path = await uploadPhoto(file)
+      if (insert) {
+        const tag = `<img src="${path}" alt="">`
+        const at = area.current?.selectionStart
+        setD((x) => {
+          const i = at ?? x.content.length
+          return { ...x, content: x.content.slice(0, i) + tag + x.content.slice(i) }
+        })
+      } else {
+        set('image', path)
+      }
+    } catch (err) {
+      onError(err)
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const toggleCat = (id: number) => set('categories', d.categories.includes(id) ? d.categories.filter((c) => c !== id) : [...d.categories, id])
 
   // wrap the selected text in tags
@@ -275,7 +297,7 @@ function Editor({ initial, meta, onCancel, onSaved, onError }: {
     try {
       const body = { ...d, date: `${d.date}:00`, image: d.image || null }
       const r = d.id ? await api<{ path: string }>(`posts/${d.id}`, 'PUT', body) : await api<{ path: string }>('posts', 'POST', body)
-      await onSaved(`Saved at ${r.path}. Visitors see it after you publish.`)
+      await onSaved(`Saved. It is live at ${r.path}`)
     } catch (err) {
       onError(err)
     } finally {
@@ -325,10 +347,19 @@ function Editor({ initial, meta, onCancel, onSaved, onError }: {
           Date
           <input type="datetime-local" value={d.date} onChange={(e) => set('date', e.target.value)} required />
         </label>
-        <label>
-          Photo (optional)
-          <input value={d.image} onChange={(e) => set('image', e.target.value.trim())} placeholder="/uploads/2026/10/photo.jpg" maxLength={500} />
-        </label>
+        <div className="admin__photo">
+          <label>
+            Photo (optional)
+            <input value={d.image} onChange={(e) => set('image', e.target.value.trim())} placeholder="Upload one, or type /uploads/... or https://..." maxLength={500} />
+          </label>
+          <div className="admin__photo-row">
+            <label className="btn btn--small btn--ghost">
+              {uploading ? 'Uploading…' : 'Upload photo'}
+              <input type="file" accept="image/*" hidden disabled={uploading} onChange={(e) => pick(e, false)} />
+            </label>
+            {d.image && <img className="admin__thumb" src={d.image} alt="" />}
+          </div>
+        </div>
       </div>
       <label>
         Short summary
@@ -343,6 +374,10 @@ function Editor({ initial, meta, onCancel, onSaved, onError }: {
           <button type="button" className="btn btn--small btn--ghost" onClick={() => wrap('<p>', '</p>')}>Paragraph</button>
           <button type="button" className="btn btn--small btn--ghost" onClick={() => wrap('<blockquote>', '</blockquote>')}>Quote</button>
           <button type="button" className="btn btn--small btn--ghost" onClick={() => wrap('<a href="https://">', '</a>')}>Link</button>
+          <label className="btn btn--small btn--ghost" title="Upload a photo and put it in the text">
+            {uploading ? 'Uploading…' : 'Insert photo'}
+            <input type="file" accept="image/*" hidden disabled={uploading} onChange={(e) => pick(e, true)} />
+          </label>
           <button type="button" className="btn btn--small" onClick={() => setPreview(!preview)}>{preview ? 'Edit' : 'Preview'}</button>
         </div>
         {preview ? (

@@ -18,12 +18,14 @@ const sections: [slug: string, layout: Layout][] = [
   ['stories-poems', 'rows'],
 ]
 
+export const revalidate = 3600
+
 export default async function Home() {
   const cats = await getCategories()
   const catOf = (slug: string) => cats.find((x) => x.slug === slug)
   // newest 40 per section is plenty to find 4 posts with photos
   const [latest, ...lists] = await Promise.all([
-    getPosts(undefined, 5),
+    getPosts(null, 5),
     ...sections.map(([slug]) => (catOf(slug) ? getPosts(catOf(slug)!.id, 40) : Promise.resolve([] as Post[]))),
   ])
   // a post may sit in several categories; show it once on this page

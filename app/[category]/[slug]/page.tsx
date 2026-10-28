@@ -6,7 +6,7 @@ import Meta from '@/components/Meta'
 import PostCard from '@/components/PostCard'
 import ReadingSize from '@/components/ReadingSize'
 import ShareButtons from '@/components/ShareButtons'
-import { getAdjacent, getAllPosts, getPost, getRelated } from '@/lib/content'
+import { getAdjacent, getPost, getRelated } from '@/lib/content'
 import { cat, cleanContent, decode, href, readingMinutes, text } from '@/lib/format'
 import { SITE_URL } from '@/lib/site'
 import { catColor } from '@/lib/theme'
@@ -18,12 +18,8 @@ const load = async (params: Params) => {
   return getPost(`/${decodeURIComponent(category)}/${decodeURIComponent(slug)}`)
 }
 
-export async function generateStaticParams() {
-  return (await getAllPosts()).map((p) => {
-    const [, category, slug] = p.path.split('/')
-    return { category, slug }
-  })
-}
+export const revalidate = 3600
+export const generateStaticParams = () => [] // built on first visit, then cached; the admin refreshes the cache on every edit
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const p = await load(params)
@@ -50,7 +46,7 @@ export default async function PostPage({ params }: { params: Params }) {
   const p = await load(params)
   if (!p) notFound()
   const c = cat(p)
-  const [{ newer, older }, related] = await Promise.all([getAdjacent(p), getRelated(p)])
+  const [{ newer, older }, related] = await Promise.all([getAdjacent(p.date), getRelated(p.id, p.categories, 3)])
   const title = text(p.title)
   return (
     <div className="wrap">
