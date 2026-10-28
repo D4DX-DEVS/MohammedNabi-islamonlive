@@ -236,7 +236,7 @@ async function route(req: Request): Promise<Response> {
   if (head === 'media' && req.method === 'DELETE') {
     const path = url.searchParams.get('path') ?? ''
     if (!/^\/media\/[a-z0-9/_.-]+$/.test(path) || path.includes('..')) throw new HttpError(400, 'Bad photo path')
-    await r2Delete(path.slice(1))
+    await r2Delete(path.slice(1)) // a copy cached at the edge disappears within a day (see app/media)
     return json({ ok: true })
   }
 
