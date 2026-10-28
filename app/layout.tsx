@@ -4,6 +4,7 @@ import { getCategories } from '@/lib/content'
 import { SITE_URL } from '@/lib/site'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+import SiteChrome from '@/components/SiteChrome'
 import './globals.css'
 
 const sans = Noto_Sans_Malayalam({ subsets: ['malayalam', 'latin'], variable: '--font-sans', display: 'swap' })
@@ -28,9 +29,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <a className="skip-link" href="#main">Skip to content</a>
-        <Header cats={cats} />
-        <main id="main">{children}</main>
-        <Footer cats={cats} />
+        <SiteChrome header={<Header cats={cats} />} footer={<Footer cats={cats} />}>
+          {children}
+        </SiteChrome>
       </body>
     </html>
   )
