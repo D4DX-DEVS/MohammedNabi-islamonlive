@@ -1,19 +1,20 @@
 import type { Metadata } from 'next'
-import { Noto_Sans_Malayalam, Noto_Serif_Malayalam } from 'next/font/google'
+import { Anek_Malayalam, Noto_Serif_Malayalam } from 'next/font/google'
 import { getCategories } from '@/lib/content'
+import { SITE_DESC } from '@/lib/seo'
 import { SITE_URL } from '@/lib/site'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import SiteChrome from '@/components/SiteChrome'
 import './globals.css'
 
-const sans = Noto_Sans_Malayalam({ subsets: ['malayalam', 'latin'], variable: '--font-sans', display: 'swap' })
+const sans = Anek_Malayalam({ subsets: ['malayalam', 'latin'], variable: '--font-sans', display: 'swap' })
 const serif = Noto_Serif_Malayalam({ subsets: ['malayalam', 'latin'], variable: '--font-serif', display: 'swap' })
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: 'Mohammed Nabi', template: '%s - Mohammed Nabi' },
-  description: 'Mohammed Nabi',
+  description: SITE_DESC,
   openGraph: { siteName: 'Mohammed Nabi', locale: 'ml_IN', type: 'website' },
 }
 

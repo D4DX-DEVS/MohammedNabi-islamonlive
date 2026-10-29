@@ -9,7 +9,7 @@ export default function Section({
       <div className="section__head">
         <h2 className="section__title">{title}</h2>
         {href && (
-          <Link href={href} className="section__more">
+          <Link href={href} className="section__more" aria-label={`More ${title}`}>
             More →
           </Link>
         )}

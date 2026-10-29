@@ -5,6 +5,9 @@ import PostRow from '@/components/PostRow'
 import Section from '@/components/Section'
 import { getCategories, getPosts } from '@/lib/content'
 import { decode, type Post } from '@/lib/format'
+import JsonLd from '@/components/JsonLd'
+import { LOGO, SITE_DESC, SITE_NAME, pageMeta } from '@/lib/seo'
+import { SITE_URL } from '@/lib/site'
 import { catColor } from '@/lib/theme'
 
 type Layout = 'cards' | 'overlay' | 'rows'
@@ -18,7 +21,8 @@ const sections: [slug: string, layout: Layout][] = [
   ['stories-poems', 'rows'],
 ]
 
-export const revalidate = 3600
+export const revalidate = 86400
+export const metadata = pageMeta({ description: SITE_DESC, path: '/' })
 
 export default async function Home() {
   const cats = await getCategories()
@@ -41,6 +45,16 @@ export default async function Home() {
 
   return (
     <>
+      <JsonLd data={{
+        '@context': 'https://schema.org',
+        '@graph': [
+          { '@type': 'Organization', '@id': `${SITE_URL}/#org`, name: SITE_NAME, url: SITE_URL, logo: `${SITE_URL}${LOGO}` },
+          {
+            '@type': 'WebSite', '@id': `${SITE_URL}/#site`, url: SITE_URL, name: SITE_NAME, inLanguage: 'ml', publisher: { '@id': `${SITE_URL}/#org` },
+            potentialAction: { '@type': 'SearchAction', target: `${SITE_URL}/search?q={search_term_string}`, 'query-input': 'required name=search_term_string' },
+          },
+        ],
+      }} />
       <div className="wrap">
         <h1 className="sr-only">മുഹമ്മദ് നബി (സ)</h1>
         <div className="mosaic">

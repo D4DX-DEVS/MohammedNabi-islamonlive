@@ -24,7 +24,7 @@ export default function OverlayCard({ p, big, priority }: { p: Post; big?: boole
         <h3 className="overlay__title">{title}</h3>
         <time dateTime={p.date}>{date(p)}</time>
       </div>
-      <Link href={href(p)} className="overlay__link" aria-label={title} />
+      <Link prefetch={false} href={href(p)} className="overlay__link" aria-label={title} />
     </article>
   )
 }

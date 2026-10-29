@@ -6,6 +6,10 @@ const securityHeaders = [
 ]
 
 export default {
+  // old WordPress search links (/?s=word) land on the new search page
+  async redirects() {
+    return [{ source: '/', has: [{ type: 'query', key: 's', value: '(?<q>.+)' }], destination: '/search?q=:q', permanent: true }]
+  },
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },

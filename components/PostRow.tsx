@@ -9,7 +9,7 @@ export default function PostRow({ p }: { p: Post }) {
   return (
     <article className="row" style={{ '--c': catColor(cat(p)) } as CSSProperties}>
       {p.image ? (
-        <Link href={href(p)} className="row__thumb" tabIndex={-1} aria-hidden>
+        <Link prefetch={false} href={href(p)} className="row__thumb" tabIndex={-1} aria-hidden>
           <Thumb src={p.image} alt="" sizes="96px" />
         </Link>
       ) : (
@@ -17,7 +17,7 @@ export default function PostRow({ p }: { p: Post }) {
       )}
       <div>
         <h3 className="row__title">
-          <Link href={href(p)}>{text(p.title)}</Link>
+          <Link prefetch={false} href={href(p)}>{text(p.title)}</Link>
         </h3>
         <time className="meta" dateTime={p.date}>
           {date(p)}

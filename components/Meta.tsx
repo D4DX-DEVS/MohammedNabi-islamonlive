@@ -5,7 +5,7 @@ export default function Meta({ p, author = true }: { p: Post; author?: boolean }
   return (
     <div className="meta">
       {author && p.authorSlug && (
-        <Link className="meta__author" href={`/author/${p.authorSlug}`}>
+        <Link prefetch={false} className="meta__author" href={`/author/${p.authorSlug}`}>
           {p.author}
         </Link>
       )}

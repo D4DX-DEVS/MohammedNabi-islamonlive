@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { cache, type CSSProperties } from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -8,38 +8,35 @@ import ReadingSize from '@/components/ReadingSize'
 import ShareButtons from '@/components/ShareButtons'
 import { getAdjacent, getPost, getRelated } from '@/lib/content'
 import { cat, cleanContent, decode, href, readingMinutes, text } from '@/lib/format'
+import Breadcrumbs from '@/components/Breadcrumbs'
+import JsonLd from '@/components/JsonLd'
+import { LOGO, SITE_NAME, pageMeta } from '@/lib/seo'
 import { SITE_URL } from '@/lib/site'
 import { catColor } from '@/lib/theme'
 
 type Params = Promise<{ category: string; slug: string }>
 
-const load = async (params: Params) => {
+// shared by generateMetadata and the page so the post is looked up once
+const load = cache(async (params: Params) => {
   const { category, slug } = await params
   return getPost(`/${decodeURIComponent(category)}/${decodeURIComponent(slug)}`)
-}
+})
 
-export const revalidate = 3600
+export const revalidate = 86400
 export const generateStaticParams = () => [] // built on first visit, then cached; the admin refreshes the cache on every edit
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const p = await load(params)
   if (!p) return {}
-  const title = text(p.title)
-  const description = text(p.excerpt).slice(0, 160)
-  return {
-    title,
-    description,
-    alternates: { canonical: href(p) },
-    openGraph: {
-      type: 'article',
-      title,
-      description,
-      url: href(p),
-      publishedTime: p.date,
-      authors: p.author ? [p.author] : undefined,
-      images: p.image ? [new URL(p.image, SITE_URL).toString()] : undefined,
-    },
-  }
+  return pageMeta({
+    title: text(p.title),
+    description: text(p.excerpt).slice(0, 160) || text(p.content).slice(0, 160),
+    path: href(p),
+    image: p.image,
+    type: 'article',
+    published: p.date,
+    author: p.author || undefined,
+  })
 }
 
 export default async function PostPage({ params }: { params: Params }) {
@@ -50,7 +47,16 @@ export default async function PostPage({ params }: { params: Params }) {
   const title = text(p.title)
   return (
     <div className="wrap">
+      <JsonLd data={{
+        '@context': 'https://schema.org', '@type': 'BlogPosting', headline: title, inLanguage: 'ml',
+        mainEntityOfPage: `${SITE_URL}${href(p)}`, datePublished: p.date,
+        ...(p.image ? { image: new URL(p.image, SITE_URL).toString() } : {}),
+        ...(p.author ? { author: { '@type': 'Person', name: p.author, url: `${SITE_URL}/author/${encodeURIComponent(p.authorSlug)}` } } : {}),
+        ...(c ? { articleSection: decode(c.name) } : {}),
+        publisher: { '@type': 'Organization', name: SITE_NAME, logo: { '@type': 'ImageObject', url: `${SITE_URL}${LOGO}` } },
+      }} />
       <article className="post" style={{ '--c': catColor(c) } as CSSProperties}>
+        <Breadcrumbs trail={[{ name: 'Home', path: '/' }, ...(c ? [{ name: decode(c.name), path: `/category/${encodeURIComponent(c.slug)}` }] : []), { name: title, path: href(p) }]} />
         <header className="post__head">
           {c && (
             <Link className="badge" href={`/category/${c.slug}`}>
@@ -64,7 +70,7 @@ export default async function PostPage({ params }: { params: Params }) {
           </div>
         </header>
 
-        {p.image && <img className="post__img" src={p.image} alt="" decoding="async" />}
+        {p.image && <img className="post__img" src={p.image} alt={title} fetchPriority="high" />}
 
         <div className="post__tools">
           <ShareButtons title={title} />
@@ -80,13 +86,13 @@ export default async function PostPage({ params }: { params: Params }) {
 
       <nav className="post-nav" aria-label="More posts">
         {older ? (
-          <Link href={href(older)} className="post-nav__prev">
+          <Link prefetch={false} href={href(older)} className="post-nav__prev">
             <small>‹ Previous</small>
             <span>{text(older.title)}</span>
           </Link>
         ) : <span />}
         {newer && (
-          <Link href={href(newer)} className="post-nav__next">
+          <Link prefetch={false} href={href(newer)} className="post-nav__next">
             <small>Next ›</small>
             <span>{text(newer.title)}</span>
           </Link>

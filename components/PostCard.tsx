@@ -12,7 +12,7 @@ export default function PostCard({ p, excerpt = false }: { p: Post; excerpt?: bo
   return (
     <article className={`card${p.image ? '' : ' card--text'}`} style={{ '--c': catColor(c) } as CSSProperties}>
       {p.image && (
-        <Link href={href(p)} className="card__thumb" tabIndex={-1} aria-hidden>
+        <Link prefetch={false} href={href(p)} className="card__thumb" tabIndex={-1} aria-hidden>
           <Thumb src={p.image} alt="" sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 285px" />
         </Link>
       )}
@@ -23,7 +23,7 @@ export default function PostCard({ p, excerpt = false }: { p: Post; excerpt?: bo
           </Link>
         )}
         <h3 className="card__title">
-          <Link href={href(p)}>{title}</Link>
+          <Link prefetch={false} href={href(p)}>{title}</Link>
         </h3>
         {(excerpt || !p.image) && <p className="card__excerpt">{text(p.excerpt)}</p>}
         <Meta p={p} />
