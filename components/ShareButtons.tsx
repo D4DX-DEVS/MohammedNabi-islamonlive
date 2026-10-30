@@ -29,13 +29,13 @@ export default function ShareButtons({ title }: { title: string }) {
   ] as const
   return (
     <div className="share">
-      <span className="share__label">Share</span>
+      <span className="share__label">പങ്കിടുക</span>
       {links.map(([name, href]) => (
         <a key={name} href={href} target="_blank" rel="noopener noreferrer" aria-label={`Share on ${name}`} title={name} data-n={name}>
           <Svg d={ICONS[name]} />
         </a>
       ))}
-      <button type="button" aria-label="Copy link" title={copied ? 'Copied' : 'Copy link'} data-n="Link"
+      <button type="button" aria-label="Copy link" title={copied ? 'പകർത്തി' : 'ലിങ്ക് പകർത്തുക'} data-n="Link"
         onClick={() => navigator.clipboard.writeText(url).then(() => setCopied(true), () => {})}>
         {copied ? (
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>

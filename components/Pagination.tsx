@@ -9,14 +9,14 @@ export default function Pagination({ page, pages, base }: { page: number; pages:
   )
   return (
     <nav className="pager" aria-label="Pagination">
-      {page > 1 && <Link href={to(page - 1)}>‹ Prev</Link>}
+      {page > 1 && <Link href={to(page - 1)}>‹ മുമ്പത്തേത്</Link>}
       {nums.map((n, i) => (
         <span key={n}>
           {i > 0 && n - nums[i - 1] > 1 && <span className="pager__gap">…</span>}
           {n === page ? <b aria-current="page">{n}</b> : <Link href={to(n)}>{n}</Link>}
         </span>
       ))}
-      {page < pages && <Link href={to(page + 1)}>Next ›</Link>}
+      {page < pages && <Link href={to(page + 1)}>അടുത്തത് ›</Link>}
     </nav>
   )
 }

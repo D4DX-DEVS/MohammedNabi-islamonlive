@@ -4,9 +4,9 @@ export default function NotFound() {
   return (
     <div className="wrap notfound">
       <h1>404</h1>
-      <p>This page could not be found.</p>
+      <p>ഈ പേജ് കണ്ടെത്താനായില്ല.</p>
       <p>
-        <Link href="/">Back to home</Link> · <Link href="/search">Search</Link>
+        <Link href="/">ഹോമിലേക്ക് മടങ്ങുക</Link> · <Link href="/search">തിരയുക</Link>
       </p>
     </div>
   )

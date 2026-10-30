@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import PostCard from '@/components/PostCard'
 import Pagination from '@/components/Pagination'
 import { searchPage } from '@/lib/content'
 
 type Props = { searchParams: Promise<{ q?: string; page?: string }> }
 
-export const metadata: Metadata = { title: 'Search', robots: { index: false } }
+export const metadata: Metadata = { title: 'തിരയൽ', robots: { index: false } }
 
 // rendered per request: the results depend on what was typed
 export default async function Search({ searchParams }: Props) {
@@ -16,13 +17,19 @@ export default async function Search({ searchParams }: Props) {
   return (
     <div className="wrap">
       <header className="page-head">
-        <h1>{q ? `Search: ${q}` : 'Search'}</h1>
+        <h1>{q ? `തിരയൽ: ${q}` : 'തിരയൽ'}</h1>
+        {/* no autofocus: on a phone it would open the keyboard before anyone asked to type */}
         <form action="/search" className="search-form search-form--page">
-          <input type="search" name="q" defaultValue={q} placeholder="Search articles…" aria-label="Search" autoFocus />
-          <button type="submit">Search</button>
+          <input type="search" name="q" defaultValue={q} placeholder="ലേഖനങ്ങൾ തിരയുക…" aria-label="തിരയുക" />
+          <button type="submit">തിരയുക</button>
         </form>
-        {q && <p>{total} result{total === 1 ? '' : 's'}</p>}
+        {q && total > 0 && <p>{total} ഫലങ്ങൾ</p>}
       </header>
+      {q && total === 0 && (
+        <p className="search-empty">
+          “{q}” എന്നതിന് ഫലങ്ങളൊന്നും കണ്ടില്ല. വാക്കുകളുടെ എണ്ണം കുറച്ചോ മറ്റൊരു വാക്ക് ഉപയോഗിച്ചോ വീണ്ടും തിരയുക, അല്ലെങ്കിൽ <Link href="/">ഹോം പേജിലെ വിഭാഗങ്ങൾ</Link> നോക്കുക.
+        </p>
+      )}
       <div className="grid grid--3">
         {data.map((p) => (
           <PostCard key={p.id} p={p} excerpt />

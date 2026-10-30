@@ -12,7 +12,7 @@ export default function Footer({ cats }: { cats: Cat[] }) {
           </p>
         </div>
         <div>
-          <h2 className="footer__title">Categories</h2>
+          <h2 className="footer__title">വിഭാഗങ്ങൾ</h2>
           <ul className="chips">
             {cats.map((c) => (
               <li key={c.id}>
@@ -22,10 +22,10 @@ export default function Footer({ cats }: { cats: Cat[] }) {
           </ul>
         </div>
         <div>
-          <h2 className="footer__title">Links</h2>
+          <h2 className="footer__title">ലിങ്കുകൾ</h2>
           <ul className="footer__links">
-            <li><Link href="/">Home</Link></li>
-            <li><Link href="/search">Search</Link></li>
+            <li><Link href="/">ഹോം</Link></li>
+            <li><Link href="/search">തിരയുക</Link></li>
             <li><a href="https://islamonlive.in/">IslamOnlive</a></li>
             <li>
               <Link href="/admin" className="footer__admin">Admin</Link>

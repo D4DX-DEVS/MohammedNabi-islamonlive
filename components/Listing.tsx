@@ -10,7 +10,7 @@ export default function Listing({
     <div className="wrap">
       <header className="page-head">
         <h1>{title}</h1>
-        <p>{total} posts</p>
+        <p>{total} പോസ്റ്റുകൾ</p>
       </header>
       <div className="grid grid--3">
         {posts.map((p) => (

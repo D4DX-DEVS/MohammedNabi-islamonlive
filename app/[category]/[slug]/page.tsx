@@ -62,7 +62,7 @@ export default async function PostPage({ params }: { params: Params }) {
       <div className="post-layout">
         <div className="post-main">
           <article className="post" style={{ '--c': catColor(c) } as CSSProperties}>
-            <Breadcrumbs trail={[{ name: 'Home', path: '/' }, ...(c ? [{ name: decode(c.name), path: `/category/${encodeURIComponent(c.slug)}` }] : []), { name: title, path: href(p) }]} />
+            <Breadcrumbs trail={[{ name: 'ഹോം', path: '/' }, ...(c ? [{ name: decode(c.name), path: `/category/${encodeURIComponent(c.slug)}` }] : []), { name: title, path: href(p) }]} />
             <header className="post__head">
               {c && (
                 <Link className="badge" href={`/category/${c.slug}`}>
@@ -73,7 +73,7 @@ export default async function PostPage({ params }: { params: Params }) {
               <div className="post__meta">
                 {p.author && <span className="avatar" aria-hidden>{[...p.author][0]}</span>}
                 <Meta p={p} />
-                <span className="meta">{readingMinutes(p)} min read</span>
+                <span className="meta">{readingMinutes(p)} മിനിറ്റ് വായന</span>
                 <ShareButtons title={title} />
               </div>
             </header>
@@ -94,13 +94,13 @@ export default async function PostPage({ params }: { params: Params }) {
           <nav className="post-nav" aria-label="More posts">
             {older ? (
               <Link prefetch={false} href={href(older)} className="post-nav__prev">
-                <small>‹ Previous</small>
+                <small>‹ മുമ്പത്തേത്</small>
                 <span>{text(older.title)}</span>
               </Link>
             ) : <span />}
             {newer && (
               <Link prefetch={false} href={href(newer)} className="post-nav__next">
-                <small>Next ›</small>
+                <small>അടുത്തത് ›</small>
                 <span>{text(newer.title)}</span>
               </Link>
             )}
@@ -139,7 +139,7 @@ export default async function PostPage({ params }: { params: Params }) {
       {related.length > 4 && (
         <section className="section" style={{ '--c': catColor(c) } as CSSProperties}>
           <div className="section__head">
-            <h2 className="section__title">You may also like</h2>
+            <h2 className="section__title">ഇതും വായിക്കുക</h2>
           </div>
           <div className="grid grid--3">
             {related.slice(4).map((r) => (

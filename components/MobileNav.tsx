@@ -34,7 +34,7 @@ export default function MobileNav({ menu }: { menu: MenuItem[] }) {
         <aside className="mobile-nav__panel">
           <button className="mobile-nav__close" aria-label="Close menu" onClick={close}>×</button>
           <form action="/search" className="search-form" onSubmit={close}>
-            <input type="search" name="q" placeholder="Search…" aria-label="Search" />
+            <input type="search" name="q" placeholder="തിരയുക…" aria-label="Search" />
           </form>
           <ul>
             {menu.map((m) => (

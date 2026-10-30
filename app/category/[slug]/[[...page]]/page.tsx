@@ -42,7 +42,7 @@ export default async function Category({ params }: Props) {
   const { n, base, name, data, total, pages } = await resolve(params)
   return (
     <>
-      <div className="wrap"><Breadcrumbs trail={[{ name: 'Home', path: '/' }, { name, path: base }]} /></div>
+      <div className="wrap"><Breadcrumbs trail={[{ name: 'ഹോം', path: '/' }, { name, path: base }]} /></div>
       <Listing title={name} total={total} posts={data} page={n} pages={pages} base={base} />
       <JsonLd data={{
         '@context': 'https://schema.org', '@type': 'CollectionPage', name, url: `${SITE_URL}${base}`, inLanguage: 'ml',

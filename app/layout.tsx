@@ -29,7 +29,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script dangerouslySetInnerHTML={{ __html: init }} />
       </head>
       <body>
-        <a className="skip-link" href="#main">Skip to content</a>
+        <a className="skip-link" href="#main">ഉള്ളടക്കത്തിലേക്ക് പോകുക</a>
         <SiteChrome header={<Header cats={cats} />} footer={<Footer cats={cats} />}>
           {children}
         </SiteChrome>
