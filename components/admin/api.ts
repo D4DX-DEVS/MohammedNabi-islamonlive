@@ -1,7 +1,7 @@
 // Types and helpers shared by the admin screens.
 export type Cat = { id: number; slug: string; name: string }
 export type Author = { name: string; slug: string }
-export type Meta = { categories: Cat[]; authors: Author[]; publishConfigured?: boolean }
+export type Meta = { categories: Cat[]; authors: Author[] }
 export type Row = { id: number; path: string; date: string; title: string; categories: number[]; author: string; image: string | null }
 export type Post = Row & { slug: string; excerpt: string; authorSlug: string; content: string }
 

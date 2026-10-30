@@ -4,8 +4,7 @@ import type { Cat, Post } from './format'
 
 export const PER_PAGE = 12
 
-// The site is built once per Publish, so each read only needs to happen once per build; `cache` shares a result between
-// a page and its metadata. (Nothing is kept between builds, so a Publish always sees the current database.)
+// `cache` shares a result between a page and its metadata within one request; the Worker stores finished pages (worker/index.ts)
 const cached = <A extends unknown[], R>(_key: string, fn: (...args: A) => Promise<R>) => cache(fn)
 
 // list queries leave out the post body; the primary category is joined in so cards need no second lookup
@@ -84,26 +83,3 @@ export const getSitemapEntries = cached('sitemap', async () => {
   ])
   return { posts, authors: authors.map((a) => a.author_slug) }
 })
-
-// everything the static build has to generate: post paths, and the page numbers of each category and author listing
-let routes: ReturnType<typeof loadRoutes> | undefined
-export const getRoutes = () => (routes ??= loadRoutes())
-async function loadRoutes() {
-  const [posts, cats, authors] = await Promise.all([
-    query<{ path: string }>('SELECT path FROM posts'),
-    query<{ slug: string; n: number }>(
-      `SELECT c.slug, (SELECT count(*) FROM posts p WHERE ${inCat(1).replace('?1', 'c.id')}) AS n FROM categories c`,
-    ),
-    query<{ slug: string; n: number }>("SELECT author_slug AS slug, count(*) AS n FROM posts WHERE author_slug != '' GROUP BY author_slug"),
-  ])
-  // /x is page 1, /x/page/2 is page 2 (page 1 has no /page/1 address)
-  const listing = (rows: { slug: string; n: number }[]) =>
-    rows.flatMap(({ slug, n }) =>
-      Array.from({ length: Math.max(1, Math.ceil(n / PER_PAGE)) }, (_, i) => ({ slug, page: i ? ['page', String(i + 1)] : [] })),
-    )
-  return {
-    posts: posts.map((p) => p.path.slice(1).split('/')).filter((x) => x.length === 2).map(([category, slug]) => ({ category, slug })),
-    categories: listing(cats),
-    authors: listing(authors),
-  }
-}

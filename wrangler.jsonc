@@ -3,18 +3,17 @@
   "name": "muhammad-nabi",
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
-  "assets": {
-    "directory": "out",
-    "binding": "ASSETS",
-    "not_found_handling": "404-page",
-    // Only the admin API, search and uploaded photos run code. Every other request is answered from static files without
-    // starting the Worker, so visitors cost no CPU time. (Secrets are set with `wrangler secret put`; see DEPLOY.md.)
-    "run_worker_first": ["/api/*", "/media/*"]
-  },
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  // the Worker calls itself to render a page, so a render cut off by the free plan's CPU limit can be retried (see worker/index.ts)
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "muhammad-nabi" }],
   "d1_databases": [
     { "binding": "DB", "database_name": "muhammednabi", "database_id": "41655fd1-4fc7-42f0-b709-9835388c730f" }
   ],
-  "r2_buckets": [
-    { "binding": "MEDIA", "bucket_name": "muhammednabi" }
-  ]
+  // photos uploaded in the admin (media/...) and the stored pages (cache/...)
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "muhammednabi" }],
+  // only the address in SITE_URL is indexed by search engines; every other address serving this Worker is noindex
+  "vars": { "SITE_URL": "https://muhammad-nabi.d4dx-fatwa.workers.dev" },
+  // renders a few pages nobody has asked for yet on every run, so most pages are stored before their first visit
+  "triggers": { "crons": ["*/5 * * * *"] }
 }

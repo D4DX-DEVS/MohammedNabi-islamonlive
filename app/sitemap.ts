@@ -2,7 +2,8 @@ import type { MetadataRoute } from 'next'
 import { getCategories, getSitemapEntries } from '@/lib/content'
 import { SITE_URL } from '@/lib/site'
 
-export const dynamic = 'force-static'
+// rendered per request from the database (the Worker stores the result until the next edit)
+export const dynamic = 'force-dynamic'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const abs = (p: string) => `${SITE_URL}${p}`

@@ -5,7 +5,6 @@ import { api, ApiError, type Meta, type Row } from './api'
 import Login from './Login'
 import PostEditor from './PostEditor'
 import PostList from './PostList'
-import PublishButton from './PublishButton'
 import { Icon, ToastProvider, useToast } from './ui'
 import './admin.css'
 
@@ -89,7 +88,6 @@ function Shell() {
           </a>
         </nav>
         <div className="adm-top__foot">
-          {meta?.publishConfigured && <PublishButton />}
           <button className="adm-nav" onClick={() => api('logout', 'POST').finally(() => setAuthed(false))}>
             <Icon name="logout" /> <span>Log out</span>
           </button>

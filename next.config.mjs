@@ -1,7 +1,22 @@
-// Fully static site: `next build` writes plain files to ./out, which Cloudflare serves without running any code.
-// Only /api/* and /media/* reach the Worker (worker/index.ts); headers and redirects live in public/_headers and _redirects.
+const securityHeaders = [
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+]
+
 export default {
-  output: 'export',
-  // no image optimizer in a static export; photos are served as they are
+  poweredByHeader: false,
+  // photos are served as they are (no image optimizer on this host)
   images: { unoptimized: true },
+  async redirects() {
+    return [
+      // old WordPress addresses
+      { source: '/feed', destination: '/feed.xml', permanent: true },
+      { source: '/', has: [{ type: 'query', key: 's', value: '(?<q>.+)' }], destination: '/search?q=:q', permanent: true },
+    ]
+  },
+  async headers() {
+    return [{ source: '/:path*', headers: securityHeaders }]
+  },
 }

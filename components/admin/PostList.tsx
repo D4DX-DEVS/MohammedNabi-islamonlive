@@ -24,7 +24,7 @@ export default function PostList({ posts, meta, loading, onNew }: { posts: Row[]
       <header className="adm-list__head">
         <div>
           <h1>Posts <span className="adm-count">{loading ? '' : `(${filtered.length === posts.length ? posts.length : `${filtered.length} of ${posts.length}`})`}</span></h1>
-          <p className="adm-help">Saved changes reach the site when you press Publish.</p>
+          <p className="adm-help">Changes go live as soon as you save.</p>
         </div>
         <button className="adm-btn adm-btn--outline" onClick={onNew}>
           <Icon name="plus" /> New post

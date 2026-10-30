@@ -11,12 +11,6 @@ export default function SiteChrome({ header, footer, children }: { header: React
   const path = usePathname() ?? ''
   const admin = path.startsWith('/admin')
 
-  // old WordPress search links (/?s=word) land on the new search page; a static host cannot redirect on a query string
-  useEffect(() => {
-    const s = path === '/' ? new URLSearchParams(location.search).get('s') : null
-    if (s) location.replace(`/search?q=${encodeURIComponent(s)}`)
-  }, [path])
-
   useEffect(() => {
     if (admin || matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return
     const io = new IntersectionObserver(

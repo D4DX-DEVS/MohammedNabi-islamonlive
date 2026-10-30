@@ -3,8 +3,8 @@ import { decode, href, text } from '@/lib/format'
 import { SITE_DESC, SITE_NAME } from '@/lib/seo'
 import { SITE_URL } from '@/lib/site'
 
-// written to a file at build time, so a post saved in the admin appears after Publish
-export const dynamic = 'force-static'
+// rendered per request from the database (the Worker stores the result until the next edit)
+export const dynamic = 'force-dynamic'
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 

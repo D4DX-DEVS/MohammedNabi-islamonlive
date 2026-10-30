@@ -4,16 +4,13 @@ import { cache } from 'react'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import JsonLd from '@/components/JsonLd'
 import Listing from '@/components/Listing'
-import { getCategories, getCategoryPage, getRoutes } from '@/lib/content'
+import { getCategories, getCategoryPage } from '@/lib/content'
 import { decode } from '@/lib/format'
 import { pageMeta } from '@/lib/seo'
 import { SITE_URL } from '@/lib/site'
 
 // /category/x is page 1, /category/x/page/2 is page 2 (the original WordPress addresses)
 type Props = { params: Promise<{ slug: string; page?: string[] }> }
-
-export const dynamicParams = false
-export const generateStaticParams = async () => (await getRoutes()).categories
 
 // one lookup serves both the metadata and the page
 const resolve = cache(async (params: Props['params']) => {

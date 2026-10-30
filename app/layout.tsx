@@ -11,6 +11,9 @@ import './globals.css'
 const sans = Anek_Malayalam({ subsets: ['malayalam', 'latin'], variable: '--font-sans', display: 'swap' })
 const serif = Noto_Serif_Malayalam({ subsets: ['malayalam', 'latin'], variable: '--font-serif', display: 'swap' })
 
+// every page reads the menu from the database when it is requested, never at build time
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: 'Mohammed Nabi', template: '%s - Mohammed Nabi' },

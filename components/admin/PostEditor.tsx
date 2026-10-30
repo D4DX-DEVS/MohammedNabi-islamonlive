@@ -87,7 +87,7 @@ export default function PostEditor({ id, meta, onClose, onUnauthorized }: {
       }
       const r = id ? await api<{ path: string }>(`posts/${id}`, 'PUT', body) : await api<{ path: string }>('posts', 'POST', body)
       setSaved(JSON.stringify(draft))
-      onClose(`Saved (${r.path}). Press Publish to put it on the site.`)
+      onClose(`Saved and live at ${r.path}`)
     } catch (e) {
       fail(e)
     } finally {
