@@ -343,7 +343,7 @@ time.meta { display: block; }
 
 /* ---------- breadcrumbs ---------- */
 .crumbs { margin: 0 0 18px; font-size: 0.85rem; color: var(--muted); }
-.crumbs ol { display: flex; flex-wrap: wrap; gap: 4px 0; }
+.crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 0; }
 .crumbs li:not(:last-child)::after { content: '›'; margin: 0 8px; color: var(--gold); }
 .crumbs a:hover { color: var(--brand); text-decoration: underline; }
 .crumbs [aria-current] { display: inline-block; max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }

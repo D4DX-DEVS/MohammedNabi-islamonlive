@@ -1,6 +1,6 @@
 # SEO audit — Mohammed Nabi (Next.js 16, App Router, ISR on Vercel, D1 data)
 
-**Status: fixes are implemented and type-checked; only the home page output has been checked in a build. Post, category and author output is unverified until the D1 daily limit resets.**
+**Status: all fixes in the table above are implemented and verified on a local production build against the real database (status codes, unique titles/descriptions, canonicals, JSON-LD parses, redirects). Live-site verification follows the deploy.**
 
 Audited 2026-10-29 against https://muhammad-nabi.vercel.app (live) and the code. Lab checks only; no Search Console,
 Core Web Vitals field data or keyword data was available, so nothing here claims ranking or traffic effects.
