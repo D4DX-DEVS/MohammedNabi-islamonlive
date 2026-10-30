@@ -12,7 +12,7 @@ export function pageMeta(o: { title?: string; description: string; path: string;
   return {
     ...(o.title ? { title: o.title } : {}),
     description: o.description,
-    alternates: { canonical: o.path },
+    alternates: { canonical: o.path, types: { 'application/rss+xml': '/feed' } },
     openGraph: {
       type: o.type ?? 'website', siteName: SITE_NAME, locale: 'ml_IN', url: o.path, title: o.title ?? SITE_NAME, description: o.description, images,
       ...(o.type === 'article' ? { publishedTime: o.published, authors: o.author ? [o.author] : undefined } : {}),
