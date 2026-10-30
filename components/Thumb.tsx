@@ -2,12 +2,13 @@ import Image from 'next/image'
 
 type Props = { src: string | null; alt: string; sizes: string; priority?: boolean }
 
-// Fills its (positioned) parent. Without a photo, falls back to a tile in the category colour.
+// Fills its (positioned) parent. Without a photo, shows a quiet tile with both site logos as a watermark.
 export default function Thumb({ src, alt, sizes, priority }: Props) {
   if (!src) {
     return (
       <div className="thumb thumb--fallback" aria-hidden>
-        <span>ﷺ</span>
+        <img src="/uploads/2018/10/logo-nabi1.png" alt="" loading="lazy" decoding="async" />
+        <img src="/uploads/2018/10/logo-islamonlive.png" alt="" loading="lazy" decoding="async" />
       </div>
     )
   }

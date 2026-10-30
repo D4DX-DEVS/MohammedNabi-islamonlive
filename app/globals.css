@@ -127,10 +127,14 @@ ul { list-style: none; margin: 0; padding: 0; }
 /* ---------- thumbs, badges, meta ---------- */
 .thumb { position: absolute; inset: 0; }
 .thumb img { object-fit: cover; }
+/* no photo: ivory tile with the pattern from the header and both logos faded into it */
 .thumb--fallback {
-  display: grid; place-items: center; font-size: 4rem; color: rgba(255, 255, 255, 0.3);
-  background: linear-gradient(135deg, var(--c), color-mix(in srgb, var(--c) 55%, #000));
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8%;
+  background: linear-gradient(135deg, rgba(251, 248, 241, 0.88), rgba(232, 223, 204, 0.88)), url('/uploads/2018/10/rmd-bg0.png');
 }
+.thumb--fallback img { position: static; width: 62%; height: auto; max-height: 30%; object-fit: contain; opacity: 0.32; filter: grayscale(0.25); }
+.thumb--fallback img + img { width: 46%; opacity: 0.28; }
+.post__ph { position: relative; aspect-ratio: 16 / 9; border-radius: 20px; overflow: hidden; margin: 8px 0 20px; border: 1.5px solid var(--border); }
 .badge {
   display: inline-block; align-self: flex-start; padding: 3px 12px; border-radius: 999px; font-size: 0.74rem; font-weight: 700;
   letter-spacing: 0.03em; background: var(--c); color: #fff; line-height: 1.7; position: relative; z-index: 2;
@@ -167,18 +171,6 @@ time.meta { display: block; }
 .overlay time { font-size: 0.8rem; color: var(--gold-soft); }
 .overlay__link { position: absolute; inset: 0; z-index: 1; }
 .overlay__body .badge { position: relative; z-index: 2; }
-
-.topics { display: flex; flex-wrap: wrap; gap: 10px; margin: 36px 0 8px; }
-.topics a {
-  position: relative; overflow: hidden; padding: 8px 18px; border-radius: 999px; border: 1.5px solid var(--border);
-  font-size: 0.9rem; font-weight: 600; background: #fff; transition: color 0.3s, border-color 0.3s, transform 0.4s var(--ease), box-shadow 0.4s;
-}
-.topics a::before {
-  content: ''; position: absolute; inset: 0; background: var(--c); transform: translateY(101%); transition: transform 0.45s var(--ease); z-index: -1;
-}
-.topics a { isolation: isolate; }
-.topics a:hover { color: #fff; border-color: var(--c); transform: translateY(-2px); box-shadow: 0 10px 18px -10px var(--c); }
-.topics a:hover::before { transform: none; }
 
 /* ---------- sections and grids ---------- */
 .section { margin-top: 72px; }
@@ -220,7 +212,6 @@ time.meta { display: block; }
 .row { display: flex; gap: 14px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); transition: padding 0.4s var(--ease), border-color 0.3s; }
 .row:hover { padding-left: 8px; border-color: var(--gold); }
 .row__thumb { position: relative; flex: none; width: 92px; height: 68px; border-radius: 12px; overflow: hidden; background: var(--surface-2); }
-.row__dot { flex: none; width: 10px; height: 10px; border-radius: 2px; transform: rotate(45deg); background: var(--c); }
 .row__title { font-size: 1rem; font-weight: 700; line-height: 1.5; }
 
 /* ---------- list pages ---------- */
@@ -347,3 +338,46 @@ time.meta { display: block; }
 .crumbs li:not(:last-child)::after { content: '›'; margin: 0 8px; color: var(--gold); }
 .crumbs a:hover { color: var(--brand); text-decoration: underline; }
 .crumbs [aria-current] { display: inline-block; max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+
+/* ---------- post page: article column + sticky side column ---------- */
+.post-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 56px; align-items: start; }
+.post-layout .post, .post-layout .post-nav { max-width: none; margin-inline: 0; }
+.post-layout .post-nav { margin-top: 48px; }
+.post-side { position: sticky; top: 76px; display: grid; gap: 24px; padding-top: 56px; }
+.side-card { background: #fff; border: 1.5px solid var(--border); border-radius: var(--radius); padding: 22px 22px 14px; box-shadow: 0 18px 34px -26px rgba(10, 31, 23, 0.5); }
+.side-card h2 { font-size: 1.05rem; padding-bottom: 12px; margin-bottom: 6px; border-bottom: 2px solid var(--gold-soft); }
+.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: none; }
+.toc li { border-bottom: 1px solid var(--border); }
+.toc li:last-child { border: 0; }
+.toc a { display: flex; gap: 14px; padding: 11px 0; font-size: 0.92rem; font-weight: 600; line-height: 1.5; }
+.toc b { color: var(--gold); font-size: 0.8rem; padding-top: 2px; flex: none; }
+.side-list .row { padding: 12px 0; }
+.side-list .row:last-child { border: 0; }
+.side-list .row__title { font-size: 0.92rem; }
+.side-promo {
+  display: flex; flex-direction: column; gap: 8px; padding: 26px; border-radius: var(--radius); color: var(--nav-text);
+  background: radial-gradient(120% 90% at 100% 100%, rgba(184, 145, 58, 0.35), transparent 60%), linear-gradient(160deg, #0f5132, var(--nav));
+  box-shadow: 0 24px 40px -24px rgba(10, 31, 23, 0.7); transition: transform 0.5s var(--ease);
+}
+.side-promo:hover { color: #fff; transform: translateY(-4px); }
+.side-promo strong { font-size: 1.4rem; font-weight: 800; }
+.side-promo span { opacity: 0.85; font-size: 0.92rem; }
+.side-promo em { align-self: flex-start; margin-top: 8px; padding: 8px 18px; border-radius: 999px; background: var(--gold); color: var(--nav); font-style: normal; font-weight: 800; font-size: 0.88rem; }
+.prose h2[id], .prose h3[id] { scroll-margin-top: 80px; }
+
+.post__meta { align-items: center; width: 100%; }
+.post__meta .share { margin-left: auto; }
+.avatar { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--brand); color: var(--gold-soft); font-weight: 800; }
+.share a, .share button { display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; background: var(--nav); color: #fff; }
+.share a[data-n="Facebook"] { background: #1877f2; }
+.share a[data-n="X"] { background: #000; }
+.share a[data-n="WhatsApp"] { background: #25d366; }
+.share a[data-n="Telegram"] { background: #229ed9; }
+.share button { background: var(--brand); }
+.share a:hover, .share button:hover { color: #fff; filter: brightness(1.12); }
+
+@media (max-width: 1000px) {
+  .post-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .post-side { position: static; padding-top: 40px; }
+  .post__meta .share { margin-left: 0; }
+}

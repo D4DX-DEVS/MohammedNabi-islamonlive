@@ -8,13 +8,9 @@ import Thumb from './Thumb'
 export default function PostRow({ p }: { p: Post }) {
   return (
     <article className="row" style={{ '--c': catColor(cat(p)) } as CSSProperties}>
-      {p.image ? (
-        <Link prefetch={false} href={href(p)} className="row__thumb" tabIndex={-1} aria-hidden>
-          <Thumb src={p.image} alt="" sizes="96px" />
-        </Link>
-      ) : (
-        <span className="row__dot" aria-hidden />
-      )}
+      <Link prefetch={false} href={href(p)} className="row__thumb" tabIndex={-1} aria-hidden>
+        <Thumb src={p.image} alt="" sizes="96px" />
+      </Link>
       <div>
         <h3 className="row__title">
           <Link prefetch={false} href={href(p)}>{text(p.title)}</Link>

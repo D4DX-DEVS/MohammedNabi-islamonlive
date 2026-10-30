@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import OverlayCard from '@/components/OverlayCard'
 import PostCard from '@/components/PostCard'
 import PostRow from '@/components/PostRow'
@@ -62,14 +61,6 @@ export default async function Home() {
             <OverlayCard key={p.id} p={p} big={i === 0} priority={i < 3} />
           ))}
         </div>
-
-        <nav className="topics" aria-label="Browse topics">
-          {cats.map((c) => (
-            <Link key={c.id} href={`/category/${c.slug}`} style={{ '--c': catColor(c) } as React.CSSProperties}>
-              {decode(c.name)}
-            </Link>
-          ))}
-        </nav>
 
         {sections.map(([slug, layout], i) => {
           const c = catOf(slug)

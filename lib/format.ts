@@ -48,3 +48,16 @@ export const cat = (p: Post) => p.category
 export const href = (p: Post) => encodeURI(p.path)
 export const date = (p: Post) =>
   new Date(p.date).toLocaleDateString('ml-IN', { year: 'numeric', month: 'short', day: 'numeric' })
+
+// gives every h2/h3 an id and returns the list, for the "in this article" box
+export function withToc(html: string) {
+  const toc: { id: string; text: string }[] = []
+  const out = html.replace(/<(h[23])(\s[^>]*)?>([\s\S]*?)<\/\1>/gi, (m, tag: string, attrs: string | undefined, inner: string) => {
+    const t = text(inner)
+    if (!t) return m
+    const id = `s${toc.length + 1}`
+    toc.push({ id, text: t })
+    return `<${tag}${(attrs ?? '').replace(/\sid="[^"]*"/i, '')} id="${id}">${inner}</${tag}>`
+  })
+  return { html: out, toc }
+}

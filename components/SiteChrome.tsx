@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, type ReactNode } from 'react'
 
 // what slides in as it scrolls into view
-const REVEAL = '.card, .row, .section__head, .overlay, .topics a, .post-nav a, .page-head, .post__head'
+const REVEAL = '.card, .row, .section__head, .overlay, .post-nav a, .page-head, .post__head'
 
 // The public header and footer are not shown on /admin, which has its own frame.
 export default function SiteChrome({ header, footer, children }: { header: ReactNode; footer: ReactNode; children: ReactNode }) {
