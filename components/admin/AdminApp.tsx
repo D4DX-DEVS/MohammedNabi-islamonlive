@@ -71,22 +71,30 @@ function Shell() {
   if (!authed) return <div className="adm"><Login onDone={() => void load()} /></div>
 
   return (
-    <div className="adm">
-      <header className="adm-top">
+    <div className="adm adm--shell">
+      <aside className="adm-top">
         <a className="adm-top__brand" href="/admin" onClick={(e) => { e.preventDefault(); toList() }}>
           <img src="/uploads/2018/10/logo-nabi1.png" alt="" />
           <span>Admin</span>
         </a>
-        <nav className="adm-top__nav">
-          {meta?.publishConfigured && <PublishButton />}
-          <a className="adm-btn adm-btn--ghost adm-btn--small" href="/" target="_blank" rel="noopener noreferrer">
-            View site <Icon name="external" size={14} />
+        <nav className="adm-top__nav" aria-label="Admin">
+          <a className={`adm-nav ${route.kind !== 'new' ? 'is-on' : ''}`} href="/admin" aria-current={route.kind !== 'new' ? 'page' : undefined} onClick={(e) => { e.preventDefault(); toList() }}>
+            <Icon name="list" /> <span>Posts</span>
           </a>
-          <button className="adm-icon" title="Log out" aria-label="Log out" onClick={() => api('logout', 'POST').finally(() => setAuthed(false))}>
-            <Icon name="logout" />
-          </button>
+          <a className={`adm-nav ${route.kind === 'new' ? 'is-on' : ''}`} href="/admin#new" aria-current={route.kind === 'new' ? 'page' : undefined}>
+            <Icon name="plus" /> <span>New post</span>
+          </a>
+          <a className="adm-nav" href="/" target="_blank" rel="noopener noreferrer">
+            <Icon name="external" /> <span>View site</span>
+          </a>
         </nav>
-      </header>
+        <div className="adm-top__foot">
+          {meta?.publishConfigured && <PublishButton />}
+          <button className="adm-nav" onClick={() => api('logout', 'POST').finally(() => setAuthed(false))}>
+            <Icon name="logout" /> <span>Log out</span>
+          </button>
+        </div>
+      </aside>
 
       <div className="adm-page">
         {route.kind === 'list' ? (

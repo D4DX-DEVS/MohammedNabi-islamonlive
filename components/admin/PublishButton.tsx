@@ -52,7 +52,7 @@ export default function PublishButton() {
   }
 
   return (
-    <button className="adm-btn adm-btn--small" disabled={running} onClick={() => void start()} title="Rebuild the site so saved changes go live">
+    <button className="adm-btn adm-btn--block" disabled={running} onClick={() => void start()} title="Rebuild the site so saved changes go live">
       {running ? 'Publishing…' : 'Publish'}
     </button>
   )
