@@ -132,7 +132,7 @@
 .adm-photo__actions { display: flex; gap: 8px; margin-top: 8px; }
 
 /* ---------- rich text editor ---------- */
-.rte { background: var(--bg); border: 1px solid var(--border); border-radius: var(--adm-radius); overflow: hidden; }
+.rte { background: var(--bg); border: 1px solid var(--border); border-radius: var(--adm-radius); overflow: clip; /* clip, not hidden: hidden would make this box the scroll parent and pin the sticky toolbar 118px down */ }
 .rte:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent); }
 .rte__bar { position: sticky; top: 118px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; background: var(--surface); border-bottom: 1px solid var(--border); }
 .rte__tools { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
@@ -187,7 +187,8 @@
   .adm-page { padding: 20px 14px 96px; }
   .adm-editbar { margin: -20px -14px 18px; padding: 10px 14px; gap: 8px; }
   .adm-editbar .adm-status { display: none; }
-  .adm-editbar .adm-btn--ghost:not(:first-child) { display: none; }
+  .adm-editbar__right .adm-btn--ghost { display: none; }
+  .adm-editbar .adm-btn { padding-inline: 14px; }
   .adm-list__head { align-items: center; }
   .adm-filters { flex-direction: column; }
   .adm-select { width: 100% !important; }
@@ -196,3 +197,8 @@
   .rte__mode span { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .adm * { animation: none !important; transition: none !important; } }
+
+/* comfortable touch targets for the buttons that are small on desktop */
+@media (pointer: coarse), (max-width: 600px) {
+  .adm-photo__actions .adm-btn, .adm-dialog__actions .adm-btn { min-height: 44px; min-width: 44px; }
+}
