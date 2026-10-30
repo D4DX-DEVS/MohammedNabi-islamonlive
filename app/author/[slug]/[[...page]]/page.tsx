@@ -4,15 +4,15 @@ import { cache } from 'react'
 import Breadcrumbs from '@/components/Breadcrumbs'
 import JsonLd from '@/components/JsonLd'
 import Listing from '@/components/Listing'
-import { getAuthorPage } from '@/lib/content'
+import { getAuthorPage, getRoutes } from '@/lib/content'
 import { pageMeta } from '@/lib/seo'
 import { SITE_URL } from '@/lib/site'
 
 // /author/x is page 1, /author/x/page/2 is page 2
 type Props = { params: Promise<{ slug: string; page?: string[] }> }
 
-export const revalidate = 86400
-export const generateStaticParams = () => []
+export const dynamicParams = false
+export const generateStaticParams = async () => (await getRoutes()).authors
 
 // one lookup serves both the metadata and the page; an empty page means unknown author or a page past the end
 const resolve = cache(async (params: Props['params']) => {

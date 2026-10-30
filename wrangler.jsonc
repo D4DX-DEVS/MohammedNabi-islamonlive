@@ -1,9 +1,20 @@
 {
-  // Only used by `npm run db:seed` (the wrangler CLI). The site itself runs on Vercel and reads D1 over Cloudflare's REST API.
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "muhammad-nabi-tools",
+  "name": "muhammad-nabi",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "out",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    // Only the admin API, search and uploaded photos run code. Every other request is answered from static files without
+    // starting the Worker, so visitors cost no CPU time. (Secrets are set with `wrangler secret put`; see DEPLOY.md.)
+    "run_worker_first": ["/api/*", "/media/*"]
+  },
   "d1_databases": [
     { "binding": "DB", "database_name": "muhammednabi", "database_id": "41655fd1-4fc7-42f0-b709-9835388c730f" }
+  ],
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "muhammednabi" }
   ]
 }

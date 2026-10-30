@@ -20,7 +20,6 @@ const sections: [slug: string, layout: Layout][] = [
   ['stories-poems', 'rows'],
 ]
 
-export const revalidate = 86400
 export const metadata = pageMeta({ description: SITE_DESC, path: '/' })
 
 export default async function Home() {

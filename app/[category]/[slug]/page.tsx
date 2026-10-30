@@ -6,7 +6,7 @@ import Meta from '@/components/Meta'
 import PostCard from '@/components/PostCard'
 import ReadingSize from '@/components/ReadingSize'
 import ShareButtons from '@/components/ShareButtons'
-import { getAdjacent, getPost, getRelated } from '@/lib/content'
+import { getAdjacent, getPost, getRelated, getRoutes } from '@/lib/content'
 import PostRow from '@/components/PostRow'
 import Thumb from '@/components/Thumb'
 import { cat, cleanContent, decode, href, readingMinutes, text, withToc } from '@/lib/format'
@@ -24,8 +24,9 @@ const load = cache(async (params: Params) => {
   return getPost(`/${decodeURIComponent(category)}/${decodeURIComponent(slug)}`)
 })
 
-export const revalidate = 86400
-export const generateStaticParams = () => [] // built on first visit, then cached; the admin refreshes the cache on every edit
+// every post is written to a file at build time; any other address is a 404
+export const dynamicParams = false
+export const generateStaticParams = async () => (await getRoutes()).posts
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const p = await load(params)

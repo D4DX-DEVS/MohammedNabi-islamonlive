@@ -3,8 +3,8 @@ import { decode, href, text } from '@/lib/format'
 import { SITE_DESC, SITE_NAME } from '@/lib/seo'
 import { SITE_URL } from '@/lib/site'
 
-// built per request from cached data (like the sitemap), so a post saved in the admin shows up straight away
-export const dynamic = 'force-dynamic'
+// written to a file at build time, so a post saved in the admin appears after Publish
+export const dynamic = 'force-static'
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -25,12 +25,12 @@ export async function GET() {
 <channel>
 <title>${esc(SITE_NAME)}</title>
 <link>${esc(SITE_URL)}</link>
-<atom:link href="${esc(SITE_URL)}/feed" rel="self" type="application/rss+xml"/>
+<atom:link href="${esc(SITE_URL)}/feed.xml" rel="self" type="application/rss+xml"/>
 <description>${esc(SITE_DESC)}</description>
 <language>ml</language>
 ${items.join('\n')}
 </channel>
 </rss>
 `
-  return new Response(xml, { headers: { 'Content-Type': 'application/rss+xml; charset=utf-8', 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' } })
+  return new Response(xml, { headers: { 'Content-Type': 'application/rss+xml; charset=utf-8' } })
 }

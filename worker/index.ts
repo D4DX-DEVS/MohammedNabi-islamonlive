@@ -1,9 +1,29 @@
-// Admin API (mounted at /api/*). Auth: one password (ADMIN_PASSWORD) -> signed, expiring, HttpOnly cookie.
-// Fails closed when ADMIN_PASSWORD or SESSION_SECRET is missing. Data: D1 through the Edit token. Photos: R2.
-import { revalidatePath, revalidateTag } from 'next/cache'
-import { CONTENT_TAG } from './content'
-import { DbError, query } from './db'
-import { r2Delete, r2Put } from './r2'
+// Everything dynamic on the otherwise static site: the admin API, search and photos. wrangler.jsonc runs this Worker
+// only for /api/* and /media/*; every other address is a plain file served without starting it.
+// Auth: one password (secret ADMIN_PASSWORD) -> signed, expiring, HttpOnly cookie. Fails closed when secrets are missing.
+// Data: the D1 database (DB) and R2 bucket (MEDIA) bound in wrangler.jsonc.
+
+interface D1Like {
+  prepare(statement: string): {
+    bind(...values: unknown[]): { all(): Promise<{ results: Row[]; meta: { last_row_id: number } }> }
+  }
+}
+interface R2Like {
+  put(key: string, value: Uint8Array, opts?: { httpMetadata?: { contentType?: string } }): Promise<unknown>
+  get(key: string): Promise<{ body: ReadableStream; httpMetadata?: { contentType?: string } } | null>
+  delete(key: string): Promise<void>
+}
+
+interface Env {
+  ASSETS: { fetch(req: Request): Promise<Response> }
+  DB: D1Like
+  MEDIA: R2Like
+  ADMIN_PASSWORD?: string
+  SESSION_SECRET?: string
+  GH_REPO?: string // "owner/name"; with GH_DISPATCH_TOKEN it enables the Publish button
+  GH_DISPATCH_TOKEN?: string
+  GH_WORKFLOW?: string
+}
 
 type Row = Record<string, unknown>
 class HttpError extends Error {
@@ -14,7 +34,8 @@ class HttpError extends Error {
 
 const SESSION_SECONDS = 8 * 60 * 60
 const COOKIE = 'admin_session'
-const MAX_UPLOAD = 4_000_000 // Vercel functions accept bodies up to 4.5 MB
+const MAX_UPLOAD = 4_000_000
+const PER_PAGE = 12
 const enc = new TextEncoder()
 
 // ---------- helpers ----------
@@ -39,19 +60,19 @@ async function safeEqual(a: string, b: string) {
   return diff === 0
 }
 
-const configured = () => Boolean(process.env.ADMIN_PASSWORD && process.env.SESSION_SECRET)
+const configured = (env: Env) => Boolean(env.ADMIN_PASSWORD && env.SESSION_SECRET)
 
-async function makeSession() {
+async function makeSession(env: Env) {
   const exp = Math.floor(Date.now() / 1000) + SESSION_SECONDS
-  return `${exp}.${await hmac(process.env.SESSION_SECRET!, String(exp))}`
+  return `${exp}.${await hmac(env.SESSION_SECRET!, String(exp))}`
 }
 
-async function isAuthed(req: Request) {
-  if (!configured()) return false
+async function isAuthed(req: Request, env: Env) {
+  if (!configured(env)) return false
   const raw = /(?:^|;\s*)admin_session=([^;]+)/.exec(req.headers.get('Cookie') ?? '')?.[1]
   const [exp, sig] = (raw ?? '').split('.')
   if (!exp || !sig || !(Number(exp) > Date.now() / 1000)) return false
-  return safeEqual(sig, await hmac(process.env.SESSION_SECRET!, exp))
+  return safeEqual(sig, await hmac(env.SESSION_SECRET!, exp))
 }
 
 const cookie = (value: string, maxAge: number, secure: boolean) =>
@@ -68,21 +89,16 @@ async function readJson(req: Request) {
   }
 }
 
-// every edit expires the cache so visitors see it straight away
-function refreshSite() {
-  revalidateTag(CONTENT_TAG, { expire: 0 })
-  revalidatePath('/', 'layout')
-}
-
-async function write<T = Row>(sql: string, params: unknown[]) {
+// ---------- D1 ----------
+async function sql<T = Row>(env: Env, statement: string, params: unknown[] = []): Promise<{ rows: T[]; lastId: number }> {
   try {
-    return await query<T>(sql, params, { write: true })
+    const r = await env.DB.prepare(statement).bind(...params).all()
+    return { rows: r.results as T[], lastId: r.meta.last_row_id }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     if (/UNIQUE/i.test(msg)) throw new HttpError(409, 'That address is already used by another post')
     console.error('D1 error:', msg)
-    if (/permission/i.test(msg)) throw new HttpError(502, 'The database token cannot write. Create one with "D1: Edit" and set it as D1_ADMIN_API_TOKEN.')
-    throw new HttpError(502, e instanceof DbError ? 'Database error' : 'Database is not configured')
+    throw new HttpError(502, 'Database error')
   }
 }
 
@@ -135,8 +151,8 @@ function parsePost(body: Record<string, unknown>): PostInput {
   }
 }
 
-async function pathFor(p: PostInput) {
-  const cats = await query<{ id: number; slug: string }>('SELECT id, slug FROM categories')
+async function pathFor(env: Env, p: PostInput) {
+  const cats = (await sql<{ id: number; slug: string }>(env, 'SELECT id, slug FROM categories')).rows
   const primary = cats.find((c) => c.id === p.categories[0])
   if (p.categories.some((id) => !cats.some((c) => c.id === id)) || !primary) throw new HttpError(400, 'Unknown category')
   return `/${primary.slug}/${p.slug}`
@@ -168,7 +184,7 @@ function sniff(b: Uint8Array): { ext: string; type: string } | null {
   return null
 }
 
-async function upload(req: Request) {
+async function upload(req: Request, env: Env) {
   if (Number(req.headers.get('Content-Length') ?? 0) > MAX_UPLOAD) throw new HttpError(413, 'Photo is too large (max 4 MB)')
   const bytes = new Uint8Array(await req.arrayBuffer())
   if (!bytes.length) throw new HttpError(400, 'No file received')
@@ -181,25 +197,66 @@ async function upload(req: Request) {
   const now = new Date()
   const rand = Array.from(crypto.getRandomValues(new Uint8Array(4)), (x) => x.toString(16).padStart(2, '0')).join('')
   const key = `media/${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}/${label}-${rand}.${kind.ext}`
-  await r2Put(key, bytes, kind.type)
+  await env.MEDIA.put(key, bytes, { httpMetadata: { contentType: kind.type } })
   return `/${key}`
 }
 
-// ---------- routes ----------
-export async function handleAdmin(req: Request): Promise<Response> {
-  try {
-    return await route(req)
-  } catch (e) {
-    if (e instanceof HttpError) return json({ error: e.message }, e.status)
-    console.error(e)
-    return json({ error: 'Something went wrong' }, 500)
+const mediaKey = (path: string) => {
+  let key = path.slice(1)
+  try { key = decodeURIComponent(key) } catch {}
+  return /^media\/[a-z0-9/_.-]+$/.test(key) && !key.includes('..') ? key : null
+}
+
+// File names carry a random part and never change, so browsers may keep them for a year.
+async function serveMedia(pathname: string, env: Env) {
+  const key = mediaKey(pathname)
+  const obj = key ? await env.MEDIA.get(key) : null
+  if (!obj) return new Response('Not found', { status: 404 })
+  return new Response(obj.body, {
+    headers: {
+      'Content-Type': obj.httpMetadata?.contentType ?? 'application/octet-stream',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+      'X-Content-Type-Options': 'nosniff',
+      // an image can never run anything even if opened directly
+      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    },
+  })
+}
+
+// ---------- search ----------
+// every word must appear in the title, summary or body; rows have the shape the site's cards use
+async function search(env: Env, q: string, page: number) {
+  const terms = q.trim().split(/\s+/).filter(Boolean).slice(0, 5)
+  if (!terms.length) return { data: [], total: 0, pages: 1 }
+  const like = (t: string) => `%${t.slice(0, 60).replace(/[\\%_]/g, '\\$&')}%`
+  const match = (n: number) => `(p.title LIKE ?${n} ESCAPE '\\' OR p.excerpt LIKE ?${n} ESCAPE '\\' OR p.content LIKE ?${n} ESCAPE '\\')`
+  const n = terms.length
+  const { rows } = await sql(
+    env,
+    `SELECT p.id, p.slug, p.path, p.date, p.title, p.excerpt, p.image, p.categories, p.author, p.author_slug,
+       c.id AS cat_id, c.slug AS cat_slug, c.name AS cat_name, count(*) OVER () AS total
+     FROM posts p LEFT JOIN categories c ON c.id = json_extract(p.categories, '$[0]')
+     WHERE ${terms.map((_, i) => match(i + 1)).join(' AND ')} ORDER BY p.date DESC LIMIT ?${n + 1} OFFSET ?${n + 2}`,
+    [...terms.map(like), PER_PAGE, (page - 1) * PER_PAGE],
+  )
+  const total = rows.length ? (rows[0].total as number) : 0
+  return {
+    total,
+    pages: Math.max(1, Math.ceil(total / PER_PAGE)),
+    data: rows.map((r) => ({
+      id: r.id, slug: r.slug, path: r.path, date: r.date, title: r.title, excerpt: r.excerpt, content: '', image: r.image ?? null,
+      categories: JSON.parse(r.categories as string),
+      category: r.cat_id == null ? undefined : { id: r.cat_id, slug: r.cat_slug, name: r.cat_name },
+      author: r.author, authorSlug: r.author_slug,
+    })),
   }
 }
 
-async function route(req: Request): Promise<Response> {
+// ---------- routes ----------
+async function handle(req: Request, env: Env): Promise<Response> {
   const url = new URL(req.url)
   const [head, idPart] = url.pathname.replace(/^\/api\//, '').replace(/\/+$/, '').split('/')
-  const secure = url.protocol === 'https:' || req.headers.get('x-forwarded-proto') === 'https'
+  const secure = url.protocol === 'https:'
 
   // state-changing requests must come from this site (SameSite=Strict already blocks cross-site cookies)
   if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -207,80 +264,134 @@ async function route(req: Request): Promise<Response> {
     if (origin && origin !== url.origin) throw new HttpError(403, 'Cross-site request blocked')
   }
 
+  // public: the search page asks for results here
+  if (head === 'search' && req.method === 'GET') {
+    const page = Math.min(1000, Math.max(1, Number(url.searchParams.get('page')) || 1))
+    const res = json(await search(env, (url.searchParams.get('q') ?? '').slice(0, 200), page))
+    res.headers.set('Cache-Control', 'public, max-age=60')
+    return res
+  }
+
   if (head === 'login' && req.method === 'POST') {
-    if (!configured()) throw new HttpError(503, 'Admin is not set up yet. Set the ADMIN_PASSWORD and SESSION_SECRET environment variables.')
+    if (!configured(env)) throw new HttpError(503, 'Admin is not set up yet. Add the ADMIN_PASSWORD and SESSION_SECRET secrets.')
     const body = await readJson(req)
-    const ok = typeof body.password === 'string' && (await safeEqual(body.password, process.env.ADMIN_PASSWORD!))
+    const ok = typeof body.password === 'string' && (await safeEqual(body.password, env.ADMIN_PASSWORD!))
     if (!ok) {
       await new Promise((r) => setTimeout(r, 1000)) // slows password guessing
       throw new HttpError(401, 'Wrong password')
     }
-    return json({ ok: true }, 200, { 'Set-Cookie': cookie(await makeSession(), SESSION_SECONDS, secure) })
+    return json({ ok: true }, 200, { 'Set-Cookie': cookie(await makeSession(env), SESSION_SECONDS, secure) })
   }
   if (head === 'logout' && req.method === 'POST') return json({ ok: true }, 200, { 'Set-Cookie': cookie('', 0, secure) })
 
-  if (!(await isAuthed(req))) throw new HttpError(401, 'Please log in')
+  if (!(await isAuthed(req, env))) throw new HttpError(401, 'Please log in')
 
   if (head === 'session') return json({ ok: true })
 
   if (head === 'meta' && req.method === 'GET') {
     const [cats, authors] = await Promise.all([
-      query('SELECT id, slug, name FROM categories ORDER BY name'),
-      query("SELECT DISTINCT author, author_slug FROM posts WHERE author_slug != '' ORDER BY author"),
+      sql(env, 'SELECT id, slug, name FROM categories ORDER BY name'),
+      sql(env, "SELECT DISTINCT author, author_slug FROM posts WHERE author_slug != '' ORDER BY author"),
     ])
-    return json({ categories: cats, authors: authors.map((a) => ({ name: a.author, slug: a.author_slug })) })
+    return json({
+      categories: cats.rows,
+      authors: authors.rows.map((a) => ({ name: a.author, slug: a.author_slug })),
+      publishConfigured: Boolean(env.GH_REPO && env.GH_DISPATCH_TOKEN),
+    })
   }
 
-  if (head === 'upload' && req.method === 'POST') return json({ path: await upload(req) }, 201)
+  if (head === 'upload' && req.method === 'POST') return json({ path: await upload(req, env) }, 201)
 
   if (head === 'media' && req.method === 'DELETE') {
     const path = url.searchParams.get('path') ?? ''
-    if (!/^\/media\/[a-z0-9/_.-]+$/.test(path) || path.includes('..')) throw new HttpError(400, 'Bad photo path')
-    await r2Delete(path.slice(1)) // a copy cached at the edge disappears within a day (see app/media)
+    const key = mediaKey(path)
+    if (!key) throw new HttpError(400, 'Bad photo path')
+    await env.MEDIA.delete(key)
     return json({ ok: true })
   }
 
   if (head === 'posts') {
     if (!idPart && req.method === 'GET') {
-      const rows = await query(`SELECT ${COLUMNS} FROM posts ORDER BY date DESC`)
+      const { rows } = await sql(env, `SELECT ${COLUMNS} FROM posts ORDER BY date DESC`)
       return json({ posts: rows.map((r) => publicRow(r)) })
     }
     if (!idPart && req.method === 'POST') {
       const p = parsePost(await readJson(req))
-      const path = await pathFor(p)
-      const rows = await write(
+      const path = await pathFor(env, p)
+      const { lastId } = await sql(
+        env,
         `INSERT INTO posts (slug, path, date, title, excerpt, content, image, categories, author, author_slug)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`,
         [p.slug, path, p.date, p.title, p.excerpt, p.content, p.image, JSON.stringify(p.categories), p.author, p.authorSlug],
       )
-      refreshSite()
-      return json({ id: rows.lastId, path }, 201)
+      return json({ id: lastId, path }, 201)
     }
     const id = Number(idPart)
     if (!Number.isInteger(id) || id < 1) throw new HttpError(400, 'Bad post id')
     if (req.method === 'GET') {
-      const rows = await query(`SELECT ${COLUMNS}, content FROM posts WHERE id = ?1`, [id])
+      const { rows } = await sql(env, `SELECT ${COLUMNS}, content FROM posts WHERE id = ?1`, [id])
       if (!rows[0]) throw new HttpError(404, 'Post not found')
       return json({ post: publicRow(rows[0], true) })
     }
     if (req.method === 'PUT') {
       const p = parsePost(await readJson(req))
-      const path = await pathFor(p)
-      if (!(await query('SELECT id FROM posts WHERE id = ?1', [id]))[0]) throw new HttpError(404, 'Post not found')
-      await write(
+      const path = await pathFor(env, p)
+      if (!(await sql(env, 'SELECT id FROM posts WHERE id = ?1', [id])).rows[0]) throw new HttpError(404, 'Post not found')
+      await sql(
+        env,
         `UPDATE posts SET slug=?2, path=?3, date=?4, title=?5, excerpt=?6, content=?7, image=?8, categories=?9, author=?10, author_slug=?11
          WHERE id=?1`,
         [id, p.slug, path, p.date, p.title, p.excerpt, p.content, p.image, JSON.stringify(p.categories), p.author, p.authorSlug],
       )
-      refreshSite()
       return json({ id, path })
     }
     if (req.method === 'DELETE') {
-      await write('DELETE FROM posts WHERE id = ?1', [id])
-      refreshSite()
+      await sql(env, 'DELETE FROM posts WHERE id = ?1', [id])
       return json({ ok: true })
     }
   }
 
+  // Publish: starts the GitHub Action that rebuilds the site from the database and deploys it
+  if (head === 'publish') {
+    if (!env.GH_REPO || !env.GH_DISPATCH_TOKEN) throw new HttpError(501, 'Publishing is not set up yet')
+    const workflow = env.GH_WORKFLOW ?? 'deploy.yml'
+    const gh = (path: string, init?: RequestInit) =>
+      fetch(`https://api.github.com/repos/${env.GH_REPO}/actions/workflows/${workflow}/${path}`, {
+        ...init,
+        headers: {
+          Authorization: `Bearer ${env.GH_DISPATCH_TOKEN}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'User-Agent': 'muhammad-nabi-admin',
+        },
+      })
+    if (req.method === 'POST') {
+      const res = await gh('dispatches', { method: 'POST', body: JSON.stringify({ ref: 'main' }) })
+      if (res.status !== 204) throw new HttpError(502, 'Could not start the publish job')
+      return json({ ok: true })
+    }
+    if (req.method === 'GET') {
+      const res = await gh('runs?per_page=1')
+      if (!res.ok) throw new HttpError(502, 'Could not read the publish status')
+      const run = ((await res.json()) as { workflow_runs?: Row[] }).workflow_runs?.[0]
+      return json({ run: run ? { status: run.status, conclusion: run.conclusion, createdAt: run.created_at, url: run.html_url } : null })
+    }
+  }
+
   throw new HttpError(404, 'Not found')
+}
+
+export default {
+  async fetch(req: Request, env: Env): Promise<Response> {
+    const { pathname } = new URL(req.url)
+    if (pathname.startsWith('/media/') && (req.method === 'GET' || req.method === 'HEAD')) return serveMedia(pathname, env)
+    if (!pathname.startsWith('/api/')) return env.ASSETS.fetch(req)
+    try {
+      return await handle(req, env)
+    } catch (e) {
+      if (e instanceof HttpError) return json({ error: e.message }, e.status)
+      console.error(e)
+      return json({ error: 'Something went wrong' }, 500)
+    }
+  },
 }

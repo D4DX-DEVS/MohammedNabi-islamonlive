@@ -5,6 +5,7 @@ import { api, ApiError, type Meta, type Row } from './api'
 import Login from './Login'
 import PostEditor from './PostEditor'
 import PostList from './PostList'
+import PublishButton from './PublishButton'
 import { Icon, ToastProvider, useToast } from './ui'
 import './admin.css'
 
@@ -77,6 +78,7 @@ function Shell() {
           <span>Admin</span>
         </a>
         <nav className="adm-top__nav">
+          {meta?.publishConfigured && <PublishButton />}
           <a className="adm-btn adm-btn--ghost adm-btn--small" href="/" target="_blank" rel="noopener noreferrer">
             View site <Icon name="external" size={14} />
           </a>

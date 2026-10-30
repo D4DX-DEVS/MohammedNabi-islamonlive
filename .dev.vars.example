@@ -1,0 +1,7 @@
+# Local test values for `npx wrangler dev` (copy to .dev.vars, which is git-ignored).
+# In production these are Cloudflare secrets: run `npx wrangler secret put NAME` for each.
+ADMIN_PASSWORD=choose-a-long-password
+SESSION_SECRET=any-long-random-string
+# Enables the Publish button (a GitHub token with "Actions: write" on this repo)
+GH_REPO=D4DX-DEVS/MohammedNabi-islamonlive
+GH_DISPATCH_TOKEN=

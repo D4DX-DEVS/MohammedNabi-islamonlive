@@ -2,8 +2,7 @@ import type { MetadataRoute } from 'next'
 import { getCategories, getSitemapEntries } from '@/lib/content'
 import { SITE_URL } from '@/lib/site'
 
-// built per request (from cached data) so a new post appears the moment the admin saves it
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-static'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const abs = (p: string) => `${SITE_URL}${p}`

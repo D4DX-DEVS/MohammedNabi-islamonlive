@@ -14,7 +14,7 @@ export default function Thumb({ src, alt, sizes, priority }: Props) {
   }
   return (
     <div className="thumb">
-      {/* Vercel resizes and converts to WebP/AVIF on the fly */}
+      {/* served as is: a static export has no image optimizer */}
       <Image src={src} alt={alt} fill sizes={sizes} priority={priority} />
     </div>
   )

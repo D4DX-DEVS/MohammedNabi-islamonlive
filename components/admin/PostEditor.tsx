@@ -87,7 +87,7 @@ export default function PostEditor({ id, meta, onClose, onUnauthorized }: {
       }
       const r = id ? await api<{ path: string }>(`posts/${id}`, 'PUT', body) : await api<{ path: string }>('posts', 'POST', body)
       setSaved(JSON.stringify(draft))
-      onClose(`Saved and live at ${r.path}`)
+      onClose(`Saved (${r.path}). Press Publish to put it on the site.`)
     } catch (e) {
       fail(e)
     } finally {
@@ -157,8 +157,8 @@ export default function PostEditor({ id, meta, onClose, onUnauthorized }: {
               View <Icon name="external" size={15} />
             </a>
           )}
-          <button className="adm-btn" disabled={busy || Boolean(problem)} title={problem || 'Save and publish (Ctrl+S)'}>
-            {busy ? 'Saving…' : id ? 'Save changes' : 'Publish'}
+          <button className="adm-btn" disabled={busy || Boolean(problem)} title={problem || 'Save (Ctrl+S)'}>
+            {busy ? 'Saving…' : id ? 'Save changes' : 'Save post'}
           </button>
         </div>
       </div>
@@ -261,7 +261,7 @@ export default function PostEditor({ id, meta, onClose, onUnauthorized }: {
         </aside>
       </div>
 
-      {problem && dirty && <p className="adm-hint" role="status">{problem} to publish.</p>}
+      {problem && dirty && <p className="adm-hint" role="status">{problem} to save.</p>}
 
       <ConfirmDialog
         open={confirm === 'delete'}

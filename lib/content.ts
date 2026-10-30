@@ -1,14 +1,12 @@
-import { unstable_cache } from 'next/cache'
+import { cache } from 'react'
 import { query } from './db'
 import type { Cat, Post } from './format'
 
 export const PER_PAGE = 12
-export const CONTENT_TAG = 'content' // expired by the admin API after every edit, so changes show up straight away
 
-// Every read goes to D1 once, then is served from Next's cache. The day is only a safety net:
-// editing in the admin expires the tag immediately.
-const cached = <A extends unknown[], R>(key: string, fn: (...args: A) => Promise<R>) =>
-  unstable_cache(fn, [key], { revalidate: 86400, tags: [CONTENT_TAG] })
+// The site is built once per Publish, so each read only needs to happen once per build; `cache` shares a result between
+// a page and its metadata. (Nothing is kept between builds, so a Publish always sees the current database.)
+const cached = <A extends unknown[], R>(_key: string, fn: (...args: A) => Promise<R>) => cache(fn)
 
 // list queries leave out the post body; the primary category is joined in so cards need no second lookup
 const COLS = `p.id, p.slug, p.path, p.date, p.title, p.excerpt, p.image, p.categories, p.author, p.author_slug,
@@ -87,11 +85,25 @@ export const getSitemapEntries = cached('sitemap', async () => {
   return { posts, authors: authors.map((a) => a.author_slug) }
 })
 
-// every word must appear in the title, summary or body; cached per query, and expired with the rest after an edit
-export const searchPage = cached('search', (q: string, page: number) => {
-  const terms = q.trim().split(/\s+/).filter(Boolean).slice(0, 5)
-  if (!terms.length) return Promise.resolve({ data: [] as Post[], total: 0, pages: 1 })
-  const like = (t: string) => `%${t.slice(0, 60).replace(/[\\%_]/g, '\\$&')}%`
-  const match = (n: number) => `(p.title LIKE ?${n} ESCAPE '\\' OR p.excerpt LIKE ?${n} ESCAPE '\\' OR p.content LIKE ?${n} ESCAPE '\\')`
-  return pagePosts('WHERE ' + terms.map((_, i) => match(i + 1)).join(' AND '), terms.map(like), page)
-})
+// everything the static build has to generate: post paths, and the page numbers of each category and author listing
+let routes: ReturnType<typeof loadRoutes> | undefined
+export const getRoutes = () => (routes ??= loadRoutes())
+async function loadRoutes() {
+  const [posts, cats, authors] = await Promise.all([
+    query<{ path: string }>('SELECT path FROM posts'),
+    query<{ slug: string; n: number }>(
+      `SELECT c.slug, (SELECT count(*) FROM posts p WHERE ${inCat(1).replace('?1', 'c.id')}) AS n FROM categories c`,
+    ),
+    query<{ slug: string; n: number }>("SELECT author_slug AS slug, count(*) AS n FROM posts WHERE author_slug != '' GROUP BY author_slug"),
+  ])
+  // /x is page 1, /x/page/2 is page 2 (page 1 has no /page/1 address)
+  const listing = (rows: { slug: string; n: number }[]) =>
+    rows.flatMap(({ slug, n }) =>
+      Array.from({ length: Math.max(1, Math.ceil(n / PER_PAGE)) }, (_, i) => ({ slug, page: i ? ['page', String(i + 1)] : [] })),
+    )
+  return {
+    posts: posts.map((p) => p.path.slice(1).split('/')).filter((x) => x.length === 2).map(([category, slug]) => ({ category, slug })),
+    categories: listing(cats),
+    authors: listing(authors),
+  }
+}
