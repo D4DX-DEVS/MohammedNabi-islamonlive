@@ -13,7 +13,7 @@
   // photos uploaded in the admin (media/...) and the stored pages (cache/...)
   "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "muhammednabi" }],
   // only the address in SITE_URL is indexed by search engines; every other address serving this Worker is noindex
-  "vars": { "SITE_URL": "https://muhammad-nabi.d4dx-fatwa.workers.dev" },
+  "vars": { "SITE_URL": "https://mohammednabi.islamonlive.in" },
   // renders a few pages nobody has asked for yet on every run, so most pages are stored before their first visit
   "triggers": { "crons": ["*/5 * * * *"] }
 }

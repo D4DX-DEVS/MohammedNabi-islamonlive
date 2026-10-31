@@ -22,6 +22,14 @@ export interface Env {
   SITE_URL: string
 }
 
+// The address visitors typed. A forwarder on another Cloudflare account serves the site under the real domain: it may send
+// x-forwarded-host; when it does not, cf-worker (the zone of the Worker that called us) says the call came from the domain's zone.
+export function publicHost(req: Request, env: Env) {
+  const site = new URL(env.SITE_URL).host
+  const via = req.headers.get('cf-worker')
+  return req.headers.get('x-forwarded-host') ?? (via && site.endsWith(`.${via}`) ? site : new URL(req.url).host)
+}
+
 // Pages the Worker has stored are valid until this moment (see worker/index.ts); every change to a post moves it forward.
 export const PURGED = 'cache/purged'
 async function purgePages(env: Env) {
@@ -265,7 +273,7 @@ async function handle(req: Request, env: Env): Promise<Response> {
   // state-changing requests must come from this site (SameSite=Strict already blocks cross-site cookies)
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     const origin = req.headers.get('Origin')
-    if (origin && origin !== url.origin) throw new HttpError(403, 'Cross-site request blocked')
+    if (origin && origin !== url.origin && origin !== `https://${publicHost(req, env)}`) throw new HttpError(403, 'Cross-site request blocked')
   }
 
   // public: the search page asks for results here

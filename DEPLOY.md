@@ -30,10 +30,12 @@ It needs `wrangler login` (or `CLOUDFLARE_API_TOKEN`) for the Cloudflare account
 
 - Worker secrets: `ADMIN_PASSWORD`, `SESSION_SECRET` (`npx wrangler secret put NAME --name muhammad-nabi`).
 - D1 database `muhammednabi` and R2 bucket `muhammednabi` are bound in `wrangler.jsonc` (`DB`, `MEDIA`).
-- **Own domain:** Workers & Pages > muhammad-nabi > Settings > Domains & Routes > Add > Custom domain (the domain's DNS
-  must be on Cloudflare). Then set `NEXT_PUBLIC_SITE_URL` in `.env` (and remove it from `.env.local`) **and** `SITE_URL`
-  in `wrangler.jsonc` to the domain, and run `npm run deploy`. If a forwarder sits in front of the Worker, it must send
-  `x-forwarded-host`.
+- **Own domain (done):** `mohammednabi.islamonlive.in` reaches the Worker through a forwarder Worker in the islamonlive.in
+  Cloudflare account, which calls `muhammad-nabi.d4dx-fatwa.workers.dev`. The Worker recognises the public address from
+  `x-forwarded-host` or, when the forwarder does not send it, from the `cf-worker` header (`publicHost` in `worker/api.ts`).
+  That address is what sitemap, canonical links and the login check use. If the domain ever changes, edit `SITE_URL` in
+  `wrangler.jsonc` and `NEXT_PUBLIC_SITE_URL` in `.env` (and `.env.local`, which wins), then `npm run deploy`.
+  The domain's robots.txt is partly managed by Cloudflare (AI-crawler blocks); ours adds the sitemap line.
 
 ## Things to know
 

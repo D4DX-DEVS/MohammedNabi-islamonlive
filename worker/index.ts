@@ -8,7 +8,7 @@
 // post shows up on its next visit. A Cron Trigger also renders a few pages nobody has asked for yet on every run.
 // If D1 fails while a page is rendered, the old stored copy is served instead of an error.
 // (Same design as the fatwa site.)
-import { type Env as ApiEnv, PURGED, handleApi } from './api'
+import { type Env as ApiEnv, PURGED, handleApi, publicHost } from './api'
 // the file only exists after `opennextjs-cloudflare build`, so the type checker cannot resolve it
 // @ts-ignore
 import openNext from '../.open-next/worker.js'
@@ -142,9 +142,19 @@ async function warm(env: Env, ctx: Ctx) {
 }
 
 // Search engines must only index the real domain. Every other address that serves this Worker (workers.dev, a staging
-// name) answers robots.txt with "disallow all" and marks pages noindex. A forwarder in front of the Worker sets x-forwarded-host.
-function offDomain(request: Request, env: Env, url: URL) {
-  return (request.headers.get('x-forwarded-host') ?? url.host) !== new URL(env.SITE_URL).host
+// name) answers robots.txt with "disallow all" and marks pages noindex. See publicHost for how the real domain is recognised.
+function offDomain(request: Request, env: Env) {
+  return publicHost(request, env) !== new URL(env.SITE_URL).host
+}
+
+// behind the forwarder, redirects must stay on the public address instead of sending visitors to workers.dev
+function keepOnPublicHost(res: Response, request: Request, env: Env, url: URL) {
+  const loc = res.headers.get('location')
+  const host = publicHost(request, env)
+  if (!loc?.startsWith(url.origin) || host === url.host) return res
+  const out = new Response(res.body, res)
+  out.headers.set('location', `https://${host}${loc.slice(url.origin.length)}`)
+  return out
 }
 
 async function route(request: Request, env: Env, ctx: Ctx, url: URL): Promise<Response> {
@@ -159,7 +169,7 @@ export default {
     if (key && request.headers.get('x-render') === key) return openNext.fetch(request, env, ctx) // the internal render call
     const url = new URL(request.url)
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/media/')) return handleApi(request, env)
-    if (!offDomain(request, env, url)) return route(request, env, ctx, url)
+    if (!offDomain(request, env)) return keepOnPublicHost(await route(request, env, ctx, url), request, env, url)
     if (url.pathname === '/robots.txt') return new Response('User-agent: *\nDisallow: /\n', { headers: { 'content-type': 'text/plain; charset=utf-8' } })
     const original = await route(request, env, ctx, url)
     const res = new Response(original.body, original) // copy, so the headers can be changed
